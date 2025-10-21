@@ -160,14 +160,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         symbol: tokenSymbol,
       });
       
-      // Deep3 analysis (Pro/Pro+ only)
+      // Deep3 analysis (Pro/Pro+ only) - Resolve tier from CATH holdings
       let deep3Result = null;
       let finalClassification = localResult.classification;
       let finalThreatLevel = localResult.threatLevel;
       
+      // Resolve tier based on CATH holdings and subscriptions
+      const cathBalance = await getCathHoldings(wallet.address, wallet.cathBalance);
+      const cathPriceInSol = await fetchCathPriceInSol();
+      const activePasses = await storage.getActivePassesByWallet(wallet.id);
+      const resolved = await resolveTier(wallet, cathBalance, cathPriceInSol, activePasses);
+      
       // CRITICAL: CA-first rule - Local BLOCK always wins
       // Deep3 can only raise severity, never lower it
-      if (wallet.tier === UserTier.PRO || wallet.tier === UserTier.PRO_PLUS) {
+      if (resolved.tier === UserTier.PRO || resolved.tier === UserTier.PRO_PLUS) {
         deep3Result = await deep3Service.analyzeToken(tokenAddress);
         
         // Merge results using CA-first rule
@@ -235,7 +241,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Wallet not found" });
       }
       
-      if (wallet.tier !== UserTier.PRO_PLUS) {
+      // Resolve tier based on CATH holdings and subscriptions
+      const cathBalance = await getCathHoldings(wallet.address, wallet.cathBalance);
+      const cathPriceInSol = await fetchCathPriceInSol();
+      const activePasses = await storage.getActivePassesByWallet(wallet.id);
+      const resolved = await resolveTier(wallet, cathBalance, cathPriceInSol, activePasses);
+      
+      if (resolved.tier !== UserTier.PRO_PLUS) {
         return res.json([]); // Only Pro+ has access
       }
       
@@ -257,7 +269,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Wallet not found" });
       }
       
-      if (wallet.tier !== UserTier.PRO_PLUS) {
+      // Resolve tier based on CATH holdings and subscriptions
+      const cathBalance = await getCathHoldings(wallet.address, wallet.cathBalance);
+      const cathPriceInSol = await fetchCathPriceInSol();
+      const activePasses = await storage.getActivePassesByWallet(wallet.id);
+      const resolved = await resolveTier(wallet, cathBalance, cathPriceInSol, activePasses);
+      
+      if (resolved.tier !== UserTier.PRO_PLUS) {
         return res.status(403).json({ error: "Pro+ tier required for arbitrage bots" });
       }
       
@@ -345,7 +363,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Wallet not found" });
       }
       
-      if (wallet.tier !== UserTier.PRO_PLUS) {
+      // Resolve tier based on CATH holdings and subscriptions
+      const cathBalance = await getCathHoldings(wallet.address, wallet.cathBalance);
+      const cathPriceInSol = await fetchCathPriceInSol();
+      const activePasses = await storage.getActivePassesByWallet(wallet.id);
+      const resolved = await resolveTier(wallet, cathBalance, cathPriceInSol, activePasses);
+      
+      if (resolved.tier !== UserTier.PRO_PLUS) {
         return res.status(403).json({ error: "Pro+ tier required for arbitrage bots" });
       }
       
