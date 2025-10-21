@@ -27,6 +27,17 @@ import {
   MONTHLY_FEE_SOL,
   TRANSACTION_FEE_PERCENT,
 } from "./payment-utils";
+import {
+  fetchCathPriceInSol,
+  fetchSolPriceInUsd,
+  getCathHoldings,
+  isBaseFeeWaived,
+  resolveTier,
+  convertUsdToSol,
+  convertUsdToCath,
+  PRICES,
+  CATH_THRESHOLDS,
+} from "./cath-utils";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -512,15 +523,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get payment calculation summary for a wallet
   app.get("/api/payments/calculate/:walletId", async (req: Request, res: Response) => {
     try {
+      const wallet = await storage.getWallet(req.params.walletId);
+      if (!wallet) {
+        return res.status(404).json({ error: "Wallet not found" });
+      }
+      
       const bots = await storage.getArbitrageBotsByWallet(req.params.walletId);
       const activePasses = await storage.getActivePassesByWallet(req.params.walletId);
+      
+      // Get CATH pricing and holdings
+      const cathBalance = await getCathHoldings(wallet.address, wallet.cathBalance);
+      const cathPriceInSol = await fetchCathPriceInSol();
+      const cathValueInSol = cathBalance * cathPriceInSol;
+      
+      // Resolve tier
+      const resolved = await resolveTier(wallet, cathBalance, cathPriceInSol, activePasses);
+      
+      // Check base fee waiver
+      const baseFeeWaived = isBaseFeeWaived(cathBalance, cathPriceInSol);
       
       const summary = getPaymentSummary(bots, activePasses);
       
       res.json({
+        // Existing bot fee summary
         ...summary,
         monthlyFeePerBot: MONTHLY_FEE_SOL,
-        transactionFeePercent: TRANSACTION_FEE_PERCENT * 100, // Convert to percentage
+        transactionFeePercent: TRANSACTION_FEE_PERCENT * 100,
+        
+        // App purchase info
+        appPurchased: wallet.appPurchased,
+        appPurchaseCostUsd: PRICES.APP_PURCHASE_USD,
+        
+        // Base fee info
+        baseFeeStatus: wallet.baseFeeStatus,
+        baseFeeCostUsd: PRICES.BASE_FEE_USD,
+        baseFeeWaived,
+        baseFeeWaivedReason: baseFeeWaived ? "cath_holdings" : wallet.baseFeeWaivedReason,
+        baseFeeNextDue: wallet.baseFeeNextDue,
+        
+        // Tier info
+        resolvedTier: resolved.tier,
+        tierSource: resolved.source,
+        paidTier: wallet.paidTier,
+        paidTierStatus: wallet.paidTierStatus,
+        proCostUsd: PRICES.PRO_TIER_USD,
+        proPlusCostUsd: PRICES.PRO_PLUS_TIER_USD,
+        
+        // CATH holdings info
+        cathBalance,
+        cathValueInSol,
+        cathPriceInSol,
+        meetsProThreshold: resolved.meetsProThreshold,
+        meetsProPlusThreshold: resolved.meetsProPlusThreshold,
+        cathThresholds: CATH_THRESHOLDS,
+        
+        // Payment preferences
+        paymentPreference: wallet.paymentPreference,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to calculate payments" });
@@ -602,6 +660,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to calculate transaction fee" });
+    }
+  });
+  
+  // ============= TIER RESOLUTION & CATH ROUTES =============
+  
+  // Resolve tier based on CATH holdings, subscriptions, and passes
+  app.get("/api/tiers/resolve/:walletId", async (req: Request, res: Response) => {
+    try {
+      const wallet = await storage.getWallet(req.params.walletId);
+      if (!wallet) {
+        return res.status(404).json({ error: "Wallet not found" });
+      }
+      
+      // Get CATH holdings (on-chain or cached)
+      const cathBalance = await getCathHoldings(wallet.address, wallet.cathBalance);
+      const cathPriceInSol = await fetchCathPriceInSol();
+      const activePasses = await storage.getActivePassesByWallet(wallet.id);
+      
+      // Resolve tier
+      const resolved = await resolveTier(wallet, cathBalance, cathPriceInSol, activePasses);
+      
+      // Update cached values
+      await storage.updateWallet(wallet.id, {
+        cathBalance: cathBalance.toString(),
+        cathValueInSol: resolved.cathValueInSol.toString(),
+        holdingsCheckedAt: new Date(),
+      });
+      
+      // Broadcast tier update if changed
+      if (wallet.tier !== resolved.tier) {
+        broadcast({
+          type: "tier_update",
+          walletId: wallet.id,
+          tier: resolved.tier,
+          source: resolved.source,
+        });
+      }
+      
+      res.json(resolved);
+    } catch (error) {
+      console.error("Tier resolution error:", error);
+      res.status(500).json({ error: "Failed to resolve tier" });
+    }
+  });
+  
+  // App purchase endpoint
+  app.post("/api/payments/app-purchase", async (req: Request, res: Response) => {
+    try {
+      const { walletId, method, txSignature } = req.body;
+      
+      if (!walletId || !method) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const wallet = await storage.getWallet(walletId);
+      if (!wallet) {
+        return res.status(404).json({ error: "Wallet not found" });
+      }
+      
+      if (wallet.appPurchased) {
+        return res.status(400).json({ error: "App already purchased" });
+      }
+      
+      // Calculate app purchase cost
+      const costSol = await convertUsdToSol(PRICES.APP_PURCHASE_USD);
+      const costCath = method === "CATH" ? await convertUsdToCath(PRICES.APP_PURCHASE_USD) : 0;
+      
+      // TODO: Process actual Solana payment via smart contract
+      // Verify txSignature and deduct from wallet balance
+      
+      await storage.updateWallet(walletId, {
+        appPurchased: true,
+        appPurchasedAt: new Date(),
+        appPurchaseTxSignature: txSignature || null,
+      });
+      
+      res.json({
+        success: true,
+        costSol,
+        costCath: method === "CATH" ? costCath : undefined,
+        message: "App purchased successfully",
+      });
+    } catch (error) {
+      console.error("App purchase error:", error);
+      res.status(500).json({ error: "Failed to process app purchase" });
+    }
+  });
+  
+  // Base monthly fee payment
+  app.post("/api/payments/base-monthly", async (req: Request, res: Response) => {
+    try {
+      const { walletId, method } = req.body;
+      
+      if (!walletId) {
+        return res.status(400).json({ error: "Missing wallet ID" });
+      }
+      
+      const wallet = await storage.getWallet(walletId);
+      if (!wallet) {
+        return res.status(404).json({ error: "Wallet not found" });
+      }
+      
+      // Check if base fee is waived by CATH holdings
+      const cathBalance = await getCathHoldings(wallet.address, wallet.cathBalance);
+      const cathPriceInSol = await fetchCathPriceInSol();
+      const waived = isBaseFeeWaived(cathBalance, cathPriceInSol);
+      
+      if (waived) {
+        await storage.updateWallet(walletId, {
+          baseFeeStatus: "waived",
+          baseFeeWaivedReason: "cath_holdings",
+          baseFeeNextDue: calculateNextPaymentDue(),
+        });
+        
+        return res.json({
+          success: true,
+          waived: true,
+          reason: "cath_holdings",
+          message: "Base fee waived due to CATH holdings",
+        });
+      }
+      
+      // Calculate base fee
+      const costSol = await convertUsdToSol(PRICES.BASE_FEE_USD);
+      const costCath = method === "CATH" ? await convertUsdToCath(PRICES.BASE_FEE_USD) : 0;
+      
+      // TODO: Process actual Solana payment via smart contract
+      
+      await storage.updateWallet(walletId, {
+        baseFeeStatus: "current",
+        baseFeeLastPaidAt: new Date(),
+        baseFeeNextDue: calculateNextPaymentDue(),
+        baseFeeWaivedReason: null,
+      });
+      
+      res.json({
+        success: true,
+        waived: false,
+        costSol,
+        costCath: method === "CATH" ? costCath : undefined,
+        nextDue: calculateNextPaymentDue(),
+        message: "Base fee payment processed",
+      });
+    } catch (error) {
+      console.error("Base fee payment error:", error);
+      res.status(500).json({ error: "Failed to process base fee payment" });
+    }
+  });
+  
+  // Tier subscription payment (Pro/Pro+)
+  app.post("/api/payments/tier-subscription", async (req: Request, res: Response) => {
+    try {
+      const { walletId, tier, method } = req.body;
+      
+      if (!walletId || !tier || !method) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      if (!["pro", "pro_plus"].includes(tier)) {
+        return res.status(400).json({ error: "Invalid tier" });
+      }
+      
+      const wallet = await storage.getWallet(walletId);
+      if (!wallet) {
+        return res.status(404).json({ error: "Wallet not found" });
+      }
+      
+      // Calculate tier cost
+      const tierCostUsd = tier === "pro_plus" ? PRICES.PRO_PLUS_TIER_USD : PRICES.PRO_TIER_USD;
+      const costSol = await convertUsdToSol(tierCostUsd);
+      const costCath = method === "CATH" ? await convertUsdToCath(tierCostUsd) : 0;
+      
+      // TODO: Process actual Solana payment via smart contract
+      
+      const nextDue = calculateNextPaymentDue();
+      await storage.updateWallet(walletId, {
+        paidTier: tier,
+        paidTierStatus: "current",
+        paidTierMethod: method,
+        paidTierLastPaidAt: new Date(),
+        paidTierNextDue: nextDue,
+      });
+      
+      // Broadcast tier update
+      broadcast({
+        type: "tier_update",
+        walletId: wallet.id,
+        tier: tier,
+        source: "subscription",
+      });
+      
+      res.json({
+        success: true,
+        tier,
+        costSol,
+        costCath: method === "CATH" ? costCath : undefined,
+        nextDue,
+        message: `${tier.toUpperCase()} subscription activated`,
+      });
+    } catch (error) {
+      console.error("Tier subscription error:", error);
+      res.status(500).json({ error: "Failed to process tier subscription" });
+    }
+  });
+  
+  // Update payment preference
+  app.patch("/api/wallets/:id/payment-preference", async (req: Request, res: Response) => {
+    try {
+      const { method } = req.body;
+      
+      if (!method || !["SOL", "CATH"].includes(method)) {
+        return res.status(400).json({ error: "Invalid payment method" });
+      }
+      
+      const wallet = await storage.updateWallet(req.params.id, { paymentPreference: method });
+      if (!wallet) {
+        return res.status(404).json({ error: "Wallet not found" });
+      }
+      
+      res.json({ success: true, paymentPreference: method });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update payment preference" });
     }
   });
   
