@@ -7,6 +7,7 @@ import { ThreatBadge } from "@/components/threat-badge";
 import { TransactionRow } from "@/components/transaction-row";
 import { Deep3Modal } from "@/components/deep3-modal";
 import { ArbitrageBotPanel } from "@/components/arbitrage-bot-panel";
+import { ImportBotDialog } from "@/components/import-bot-dialog";
 import { DemoControls } from "@/components/demo-controls";
 import { Shield, Activity, AlertTriangle, CheckCircle, Zap, Wifi, WifiOff } from "lucide-react";
 import { type Transaction, type Deep3AnalysisResponse, UserTier, ThreatLevel, type ArbitrageBot, type BotStats } from "@shared/schema";
@@ -243,20 +244,41 @@ export function Dashboard({ walletAddress, tier }: DashboardProps) {
                   <Zap className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No arbitrage bots configured</h3>
                   <p className="text-muted-foreground mb-4">
-                    Set up arbitrage bots to automate profitable trades
+                    Create a custom bot or import a template from the marketplace
                   </p>
-                  <Button 
-                    data-testid="button-add-bot" 
-                    onClick={handleCreateBot}
-                    disabled={creatingBot}
-                  >
-                    <Zap className="w-4 h-4 mr-2" />
-                    {creatingBot ? "Creating..." : "Add Arbitrage Bot"}
-                  </Button>
+                  <div className="flex gap-3 justify-center">
+                    <Button 
+                      data-testid="button-add-bot" 
+                      onClick={handleCreateBot}
+                      disabled={creatingBot}
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      {creatingBot ? "Creating..." : "Add Arbitrage Bot"}
+                    </Button>
+                    <ImportBotDialog walletId={wallet?.id || ""} disabled={!wallet?.id} />
+                  </div>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Active Bots ({bots.length}/2)</h3>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm"
+                      onClick={handleCreateBot}
+                      disabled={creatingBot || bots.length >= 2}
+                      data-testid="button-add-bot-header"
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      {creatingBot ? "Creating..." : "Add Bot"}
+                    </Button>
+                    <ImportBotDialog 
+                      walletId={wallet?.id || ""} 
+                      disabled={!wallet?.id || bots.length >= 2} 
+                    />
+                  </div>
+                </div>
                 {bots.map((bot) => (
                   <ArbitrageBotPanel
                     key={bot.id}
