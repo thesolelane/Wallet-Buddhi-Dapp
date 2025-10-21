@@ -63,21 +63,21 @@ export class Deep3MockService {
     const recommendations: string[] = [];
     
     if (classification === "malicious") {
-      recommendations.push("❌ Do not interact with this token - high risk of loss");
-      recommendations.push("🚨 Multiple red flags detected including potential honeypot mechanics");
-      recommendations.push("📊 Extremely low liquidity and suspicious holder distribution");
+      recommendations.push("Do not interact with this token - high risk of loss");
+      recommendations.push("Multiple red flags detected including potential honeypot mechanics");
+      recommendations.push("Extremely low liquidity and suspicious holder distribution");
     } else if (classification === "suspicious") {
-      recommendations.push("⚠️ Exercise extreme caution when interacting with this token");
-      recommendations.push("🔍 Verify token legitimacy on multiple sources before trading");
-      recommendations.push("💰 Consider limiting exposure to small test amounts only");
+      recommendations.push("Exercise extreme caution when interacting with this token");
+      recommendations.push("Verify token legitimacy on multiple sources before trading");
+      recommendations.push("Consider limiting exposure to small test amounts only");
     } else {
-      recommendations.push("✅ Token appears legitimate based on current analysis");
-      recommendations.push("📈 Monitor liquidity and holder count for changes");
-      recommendations.push("🔄 Continue to verify on official sources before large transactions");
+      recommendations.push("Token appears legitimate based on current analysis");
+      recommendations.push("Monitor liquidity and holder count for changes");
+      recommendations.push("Continue to verify on official sources before large transactions");
     }
     
     if (riskScore < 30) {
-      recommendations.push("🌟 Strong community presence and social validation detected");
+      recommendations.push("Strong community presence and social validation detected");
     }
     
     return recommendations;

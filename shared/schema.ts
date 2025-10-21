@@ -38,6 +38,8 @@ export const wallets = pgTable("wallets", {
 export const insertWalletSchema = createInsertSchema(wallets).omit({
   id: true,
   connectedAt: true,
+}).extend({
+  tier: z.enum(["basic", "pro", "pro_plus"]).default("basic"),
 });
 
 export type InsertWallet = z.infer<typeof insertWalletSchema>;

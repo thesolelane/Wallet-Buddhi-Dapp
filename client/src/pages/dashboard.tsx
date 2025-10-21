@@ -11,7 +11,8 @@ import { DemoControls } from "@/components/demo-controls";
 import { Shield, Activity, AlertTriangle, CheckCircle, Zap, Wifi, WifiOff } from "lucide-react";
 import { type Transaction, type Deep3AnalysisResponse, UserTier, ThreatLevel, type ArbitrageBot, type BotStats } from "@shared/schema";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardProps {
   walletAddress: string;
@@ -20,11 +21,23 @@ interface DashboardProps {
 
 export function Dashboard({ walletAddress, tier }: DashboardProps) {
   const [selectedDeep3, setSelectedDeep3] = useState<Deep3AnalysisResponse | null>(null);
+  const [creatingBot, setCreatingBot] = useState(false);
   const { connected } = useWebSocket(walletAddress);
+  const { toast } = useToast();
   
   // Fetch transactions
   const { data: transactions = [], isLoading: loadingTransactions } = useQuery<Transaction[]>({
     queryKey: ["/api/transactions", walletAddress],
+  });
+  
+  // Fetch wallet to get ID
+  const { data: wallet } = useQuery<{ id: string; address: string; tier: string }>({
+    queryKey: ["/api/wallets", walletAddress],
+    queryFn: async () => {
+      const res = await fetch(`/api/wallets/${walletAddress}`);
+      if (!res.ok) throw new Error("Failed to fetch wallet");
+      return res.json();
+    },
   });
   
   // Fetch arbitrage bots (Pro+ only)
@@ -40,6 +53,55 @@ export function Dashboard({ walletAddress, tier }: DashboardProps) {
       tier,
     }).catch(console.error);
   }, [walletAddress, tier]);
+  
+  // Create arbitrage bot
+  const handleCreateBot = async () => {
+    if (!wallet?.id) {
+      toast({
+        title: "Error",
+        description: "Wallet not found",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (bots.length >= 2) {
+      toast({
+        title: "Bot Limit Reached",
+        description: "Maximum 2 bots allowed per wallet",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setCreatingBot(true);
+    try {
+      const botAddress = `bot_${Math.random().toString(36).substr(2, 9)}.cooperanth.sol`;
+      await apiRequest("POST", "/api/arbitrage-bots", {
+        walletId: wallet.id,
+        walletAddress: botAddress,
+        minProfitThreshold: 0.01,
+        maxRiskScore: 50,
+        targetPairs: ["SOL/USDC", "SOL/USDT"],
+      });
+      
+      // Invalidate bots query to refetch
+      await queryClient.invalidateQueries({ queryKey: ["/api/arbitrage-bots", walletAddress] });
+      
+      toast({
+        title: "Bot Created",
+        description: "Arbitrage bot created successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create bot",
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingBot(false);
+    }
+  };
   
   const stats = {
     totalScanned: transactions.length,
@@ -183,9 +245,13 @@ export function Dashboard({ walletAddress, tier }: DashboardProps) {
                   <p className="text-muted-foreground mb-4">
                     Set up arbitrage bots to automate profitable trades
                   </p>
-                  <Button data-testid="button-add-bot">
+                  <Button 
+                    data-testid="button-add-bot" 
+                    onClick={handleCreateBot}
+                    disabled={creatingBot}
+                  >
                     <Zap className="w-4 h-4 mr-2" />
-                    Add Arbitrage Bot
+                    {creatingBot ? "Creating..." : "Add Arbitrage Bot"}
                   </Button>
                 </CardContent>
               </Card>
