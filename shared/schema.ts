@@ -29,13 +29,36 @@ export enum TokenClassification {
 export const wallets = pgTable("wallets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   address: text("address").notNull().unique(),
-  tier: text("tier").notNull().default("basic"), // basic, pro, pro_plus
+  tier: text("tier").notNull().default("basic"), // basic, pro, pro_plus (deprecated - use resolveTier)
   nickname: text("nickname"),
   solanaName: text("solana_name"), // e.g., "wbuddi.cooperanth.sol"
   
-  // Payment tracking
+  // Wallet balances
   solBalance: text("sol_balance").default("0"),
   cathBalance: text("cath_balance").default("0"),
+  cathValueInSol: text("cath_value_in_sol").default("0"), // Cached value
+  holdingsCheckedAt: timestamp("holdings_checked_at"),
+  
+  // App purchase (one-time $0.99)
+  appPurchased: boolean("app_purchased").notNull().default(false),
+  appPurchasedAt: timestamp("app_purchased_at"),
+  appPurchaseTxSignature: text("app_purchase_tx_signature"),
+  
+  // Base monthly fee ($0.99/month OR waived if CATH ≥ 0.1 SOL value)
+  baseFeeStatus: text("base_fee_status").notNull().default("current"), // current, pending, failed, waived
+  baseFeeNextDue: timestamp("base_fee_next_due"),
+  baseFeeLastPaidAt: timestamp("base_fee_last_paid_at"),
+  baseFeeWaivedReason: text("base_fee_waived_reason"), // "cath_holdings" or null
+  
+  // Paid tier subscription (Pro = $9.99/mo, Pro+ = $29.99/mo OR free via CATH holdings)
+  paidTier: text("paid_tier").default("none"), // none, pro, pro_plus
+  paidTierStatus: text("paid_tier_status").default("none"), // none, current, pending, failed
+  paidTierMethod: text("paid_tier_method"), // SOL, CATH, or null
+  paidTierNextDue: timestamp("paid_tier_next_due"),
+  paidTierLastPaidAt: timestamp("paid_tier_last_paid_at"),
+  
+  // Payment preferences
+  paymentPreference: text("payment_preference").default("SOL"), // SOL or CATH
   
   connectedAt: timestamp("connected_at").notNull().defaultNow(),
 });
@@ -43,8 +66,15 @@ export const wallets = pgTable("wallets", {
 export const insertWalletSchema = createInsertSchema(wallets).omit({
   id: true,
   connectedAt: true,
+  holdingsCheckedAt: true,
+  appPurchasedAt: true,
+  baseFeeNextDue: true,
+  baseFeeLastPaidAt: true,
+  paidTierNextDue: true,
+  paidTierLastPaidAt: true,
 }).extend({
   tier: z.enum(["basic", "pro", "pro_plus"]).default("basic"),
+  paymentPreference: z.enum(["SOL", "CATH"]).default("SOL"),
 });
 
 export type InsertWallet = z.infer<typeof insertWalletSchema>;
