@@ -8,9 +8,11 @@ import {
   insertWalletSchema, 
   insertTransactionSchema, 
   insertArbitrageBotSchema,
+  botTemplateSchema,
   UserTier,
   TokenClassification,
   ThreatLevel,
+  type InsertArbitrageBot,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -279,6 +281,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete bot" });
+    }
+  });
+  
+  // Import bot from template
+  app.post("/api/arbitrage-bots/import", async (req: Request, res: Response) => {
+    try {
+      const { template, walletId } = req.body;
+      
+      // Validate wallet
+      const wallet = await storage.getWallet(walletId);
+      if (!wallet) {
+        return res.status(404).json({ error: "Wallet not found" });
+      }
+      
+      if (wallet.tier !== UserTier.PRO_PLUS) {
+        return res.status(403).json({ error: "Pro+ tier required for arbitrage bots" });
+      }
+      
+      // Check bot limit
+      const existingBots = await storage.getArbitrageBotsByWallet(walletId);
+      if (existingBots.length >= 2) {
+        return res.status(400).json({ error: "Maximum 2 bots allowed per wallet" });
+      }
+      
+      // Validate template against schema
+      const validatedTemplate = botTemplateSchema.parse(template);
+      
+      // Generate unique bot wallet address
+      const botAddress = `bot_${Math.random().toString(36).substr(2, 9)}.cooperanth.sol`;
+      
+      // Convert template to bot config
+      const botData: InsertArbitrageBot = {
+        walletId,
+        botName: validatedTemplate.name,
+        walletAddress: botAddress,
+        active: false, // Start inactive for safety
+        strategy: validatedTemplate.strategy,
+        minProfitThreshold: validatedTemplate.minProfitThreshold.toString(),
+        maxRiskScore: validatedTemplate.maxRiskScore,
+        maxTradeSize: validatedTemplate.maxTradeSize.toString(),
+        slippageTolerance: validatedTemplate.slippageTolerance.toString(),
+        targetPairs: validatedTemplate.targetPairs.join(","),
+        dexAllowlist: validatedTemplate.dexAllowlist.join(","),
+        autoPauseConfig: validatedTemplate.autoPause ? JSON.stringify(validatedTemplate.autoPause) : null,
+      };
+      
+      // Create bot
+      const bot = await storage.createArbitrageBot(botData);
+      
+      // Broadcast bot creation
+      broadcast({
+        type: "bot_update",
+        data: bot,
+      });
+      
+      res.json(bot);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid bot template", 
+          details: error.errors 
+        });
+      }
+      console.error("Bot import error:", error);
+      res.status(500).json({ error: "Failed to import bot template" });
     }
   });
   

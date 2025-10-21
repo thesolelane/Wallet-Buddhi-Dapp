@@ -83,6 +83,13 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
 
+// Bot strategy types
+export enum BotStrategy {
+  DEX_ARBITRAGE = "dex_arbitrage",
+  LIQUIDITY_PROVISION = "liquidity_provision",
+  MARKET_MAKING = "market_making",
+}
+
 // Arbitrage bot configuration (Pro+ tier)
 export const arbitrageBots = pgTable("arbitrage_bots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -90,9 +97,14 @@ export const arbitrageBots = pgTable("arbitrage_bots", {
   botName: text("bot_name").notNull(),
   active: boolean("active").notNull().default(false),
   walletAddress: text("wallet_address").notNull(), // cooperanth.sol wallet
-  strategy: text("strategy").notNull(), // dex_arbitrage, liquidity_provision, etc.
-  minProfitThreshold: text("min_profit_threshold").notNull().default("0.1"),
-  maxTradeSize: text("max_trade_size").notNull().default("10"),
+  strategy: text("strategy").notNull(), // dex_arbitrage, liquidity_provision, market_making
+  minProfitThreshold: text("min_profit_threshold").notNull().default("0.01"), // 1%
+  maxRiskScore: integer("max_risk_score").notNull().default(50), // 0-100 Deep3 score
+  maxTradeSize: text("max_trade_size").notNull().default("10"), // SOL
+  slippageTolerance: text("slippage_tolerance").notNull().default("0.5"), // 0.5%
+  targetPairs: text("target_pairs").notNull().default("SOL/USDC,SOL/USDT"), // comma-separated
+  dexAllowlist: text("dex_allowlist").notNull().default("raydium,orca,jupiter"), // comma-separated
+  autoPauseConfig: text("auto_pause_config"), // JSON string
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -103,6 +115,26 @@ export const insertArbitrageBotSchema = createInsertSchema(arbitrageBots).omit({
 
 export type InsertArbitrageBot = z.infer<typeof insertArbitrageBotSchema>;
 export type ArbitrageBot = typeof arbitrageBots.$inferSelect;
+
+// Bot template schema for import validation
+export const botTemplateSchema = z.object({
+  name: z.string().min(1).max(100),
+  strategy: z.enum(["dex_arbitrage", "liquidity_provision", "market_making"]),
+  minProfitThreshold: z.number().min(0.001).max(1).default(0.01), // 0.1% to 100%
+  maxRiskScore: z.number().int().min(0).max(100).default(50),
+  maxTradeSize: z.number().positive().max(1000).default(10), // Max 1000 SOL
+  slippageTolerance: z.number().min(0).max(10).default(0.5), // 0% to 10%
+  targetPairs: z.array(z.string()).min(1).default(["SOL/USDC", "SOL/USDT"]),
+  dexAllowlist: z.array(z.enum(["raydium", "orca", "jupiter", "phoenix"])).min(1).default(["raydium", "orca"]),
+  autoPause: z.object({
+    enabled: z.boolean().default(true),
+    volatilityThreshold: z.number().min(0).max(100).default(20), // %
+    maxDailyLoss: z.number().min(0).max(100).default(5), // SOL
+    maxConsecutiveLosses: z.number().int().min(1).max(20).default(5),
+  }).optional(),
+});
+
+export type BotTemplate = z.infer<typeof botTemplateSchema>;
 
 // Arbitrage bot stats
 export interface BotStats {
