@@ -119,7 +119,7 @@ export function HomePage({ onConnect }: HomePageProps) {
               description="Full protection + arbitrage bots"
               features={[
                 "Everything in Pro",
-                "2 arbitrage bots included",
+                "2 arbitrage bots included + 3 additional slots",
                 "cooperanth.sol wallets",
                 "Automated MEV protection",
                 "Priority support",

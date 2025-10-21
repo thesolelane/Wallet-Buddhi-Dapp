@@ -238,10 +238,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Pro+ tier required for arbitrage bots" });
       }
       
-      // Check bot limit (max 2)
+      // Check bot limit (2 included + 3 additional = 5 max)
       const existingBots = await storage.getArbitrageBotsByWallet(data.walletId);
-      if (existingBots.length >= 2) {
-        return res.status(400).json({ error: "Maximum 2 bots allowed per wallet" });
+      if (existingBots.length >= 5) {
+        return res.status(400).json({ error: "Maximum 5 bots allowed per wallet" });
       }
       
       const bot = await storage.createArbitrageBot(data);
@@ -304,10 +304,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Pro+ tier required for arbitrage bots" });
       }
       
-      // Check bot limit
+      // Check bot limit (2 included + 3 additional = 5 max)
       const existingBots = await storage.getArbitrageBotsByWallet(walletId);
-      if (existingBots.length >= 2) {
-        return res.status(400).json({ error: "Maximum 2 bots allowed per wallet" });
+      if (existingBots.length >= 5) {
+        return res.status(400).json({ error: "Maximum 5 bots allowed per wallet" });
       }
       
       // Validate template against schema

@@ -66,10 +66,10 @@ export function Dashboard({ walletAddress, tier }: DashboardProps) {
       return;
     }
     
-    if (bots.length >= 2) {
+    if (bots.length >= 5) {
       toast({
         title: "Bot Limit Reached",
-        description: "Maximum 2 bots allowed per wallet",
+        description: "Maximum 5 bots allowed per wallet (2 included + 3 additional)",
         variant: "destructive",
       });
       return;
@@ -262,12 +262,12 @@ export function Dashboard({ walletAddress, tier }: DashboardProps) {
             ) : (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">Active Bots ({bots.length}/2)</h3>
+                  <h3 className="text-lg font-semibold">Active Bots ({bots.length}/5)</h3>
                   <div className="flex gap-2">
                     <Button 
                       size="sm"
                       onClick={handleCreateBot}
-                      disabled={creatingBot || bots.length >= 2}
+                      disabled={creatingBot || bots.length >= 5}
                       data-testid="button-add-bot-header"
                     >
                       <Zap className="w-4 h-4 mr-2" />
@@ -275,7 +275,7 @@ export function Dashboard({ walletAddress, tier }: DashboardProps) {
                     </Button>
                     <ImportBotDialog 
                       walletId={wallet?.id || ""} 
-                      disabled={!wallet?.id || bots.length >= 2} 
+                      disabled={!wallet?.id || bots.length >= 5} 
                     />
                   </div>
                 </div>

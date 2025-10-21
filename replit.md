@@ -52,10 +52,11 @@ Wallet Buddhi is a tiered wallet protection system for Solana that detects spam 
 
 ### Pro+ ($29.99/mo)
 - Everything in Pro
-- 2 arbitrage bots with dedicated cooperanth.sol wallets
+- 2 arbitrage bots included + 3 additional slots (5 bots max)
 - Bot template marketplace with curated configurations (Conservative DEX, Stable Liquidity, Aggressive Market Maker)
 - JSON-based template import with strict validation
 - Automated trading strategies with configurable risk parameters
+- Dedicated cooperanth.sol wallets for each bot
 - MEV protection via Deep3 risk gating
 - Priority support
 
@@ -92,11 +93,12 @@ WebSocket server broadcasts:
 ## Recent Changes
 - 2025-10-21: Bot template import system complete
   - Created botTemplateSchema with strict Zod validation (strategy enum, numeric ranges, DEX allowlist)
-  - Built POST /api/arbitrage-bots/import endpoint with tier checks and 2-bot limit enforcement
+  - Built POST /api/arbitrage-bots/import endpoint with tier checks and 5-bot limit enforcement
   - Added ImportBotDialog component with 3 curated example templates and JSON preview
   - Fixed critical wallet tier sync bug: POST /api/wallets now updates tier if changed
   - Extended arbitrageBots schema with maxRiskScore, slippageTolerance, dexAllowlist, targetPairs, autoPauseConfig
-  - Full E2E testing passed: wallet connection → Pro+ upgrade → template import → 2-bot limit enforcement
+  - Updated bot limits: 2 included + 3 additional slots (5 max total)
+  - Full E2E testing passed: wallet connection → Pro+ upgrade → template import → limit enforcement
 - 2025-10-21: Initial MVP implementation with all three tiers
 - Full schema definition for wallets, transactions, and arbitrage bots
 - Complete UI with responsive design and beautiful empty/loading states
