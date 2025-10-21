@@ -49,7 +49,7 @@ export function HomePage({ onConnect }: HomePageProps) {
               <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-success" />
-                  Free Basic Protection
+                  $0.99 App + $0.99/mo
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-success" />
@@ -87,7 +87,7 @@ export function HomePage({ onConnect }: HomePageProps) {
             <FeatureCard
               icon={<Shield className="w-8 h-8" />}
               title="Basic"
-              price="Free"
+              price="$0.99 + $0.99/mo"
               description="Local spam classifier with CA-first rules"
               features={[
                 "Real-time transaction monitoring",
@@ -138,7 +138,7 @@ export function HomePage({ onConnect }: HomePageProps) {
           </p>
           <Button size="lg" onClick={handleConnect} data-testid="button-cta-connect">
             <Shield className="w-5 h-5 mr-2" />
-            Get Started for Free
+            Get Started - $0.99
           </Button>
         </div>
       </section>
