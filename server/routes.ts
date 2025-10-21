@@ -437,9 +437,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Pass already activated" });
       }
       
-      // TODO: Verify NFT ownership in Solana wallet
-      // For now, we'll accept the activation request
+      // TODO: SECURITY - Verify NFT ownership in Solana wallet
       // In production: Use Solana RPC to verify wallet owns this NFT
+      // const isOwner = await verifySolanaNFTOwnership(wallet.address, nftMintAddress);
+      // if (!isOwner) {
+      //   return res.status(403).json({ error: "Wallet does not own this NFT" });
+      // }
+      
+      // TODO: SECURITY - Verify NFT was issued by DAO
+      // In production: Check NFT creator/update authority matches DAO address
+      // const nftMetadata = await fetchNFTMetadata(nftMintAddress);
+      // if (nftMetadata.updateAuthority !== DAO_AUTHORITY_ADDRESS) {
+      //   return res.status(403).json({ error: "NFT not issued by authorized DAO" });
+      // }
       
       // TODO: Parse NFT metadata to extract pass details
       // For now, use placeholder data - will be replaced with actual NFT metadata
@@ -483,7 +493,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Pass not found" });
       }
       
-      // TODO: Verify NFT is no longer in wallet before deactivating
+      // TODO: SECURITY - Verify NFT is no longer in wallet before deactivating
+      // In production: Use Solana RPC to verify wallet no longer owns this NFT
+      // const isOwner = await verifySolanaNFTOwnership(pass.walletId, nftMintAddress);
+      // if (isOwner) {
+      //   return res.status(400).json({ error: "NFT still owned by wallet - cannot deactivate" });
+      // }
       
       await storage.updateNftPass(pass.id, { isActive: false });
       res.json({ success: true, message: "Pass deactivated" });
@@ -526,8 +541,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Bot not found" });
       }
       
+      // Get all bots for wallet to determine bot index
+      const allBots = await storage.getArbitrageBotsByWallet(bot.walletId);
+      const sortedBots = [...allBots].sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      const botIndex = sortedBots.findIndex((b) => b.id === botId);
+      
       const activePasses = await storage.getActivePassesByWallet(bot.walletId);
-      const requiredFee = calculateBotMonthlyFee(bot, activePasses);
+      const requiredFee = calculateBotMonthlyFee(bot, activePasses, allBots.length, botIndex);
       
       // Validate payment amount (allow small buffer for conversion rates)
       if (paymentAmount < requiredFee * 0.95) {

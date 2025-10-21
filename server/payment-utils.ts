@@ -10,11 +10,15 @@ export const TRANSACTION_FEE_PERCENT = 0.005; // 0.5% taker fee
  * Calculate monthly fee for an arbitrage bot
  * @param bot The arbitrage bot
  * @param activePasses Active NFT passes for the wallet
+ * @param totalBotsForWallet Total number of bots for this wallet
+ * @param botIndexInWallet Bot's creation order (0-indexed) - determines if it's in free slot
  * @returns Monthly fee in SOL (0 if included bot or waived by pass)
  */
 export function calculateBotMonthlyFee(
   bot: ArbitrageBot,
-  activePasses: NftPass[]
+  activePasses: NftPass[],
+  totalBotsForWallet: number = 0,
+  botIndexInWallet: number = 0
 ): number {
   // First 2 bots are included - no monthly fee
   if (bot.isIncludedBot) {
@@ -23,11 +27,20 @@ export function calculateBotMonthlyFee(
 
   // Check if fee is waived by any active pass
   const hasFeeWaiverPass = activePasses.some(
-    (pass) => pass.benefitType === "fee_waiver" && pass.isActive
+    (pass) => pass.benefitType === "fee_waiver" && isPassValid(pass)
   );
 
   if (hasFeeWaiverPass) {
     return 0;
+  }
+
+  // Check if this bot is covered by free bot slot passes
+  // Free bot slots apply to additional bots beyond the 2 included
+  const freeBotSlots = getFreeBotSlots(activePasses);
+  const additionalBotIndex = botIndexInWallet - 2; // Index among additional bots (0 = 3rd bot)
+  
+  if (additionalBotIndex >= 0 && additionalBotIndex < freeBotSlots) {
+    return 0; // This bot is covered by a free slot pass
   }
 
   // Additional bots (3-5) require monthly fee if active
@@ -129,7 +142,7 @@ export function shouldDeleteBot(bot: ArbitrageBot): boolean {
 
 /**
  * Calculate total monthly cost for all active bots
- * @param bots Array of arbitrage bots
+ * @param bots Array of arbitrage bots (should be sorted by creation date)
  * @param activePasses Active NFT passes for the wallet
  * @returns Total monthly cost in SOL
  */
@@ -137,8 +150,13 @@ export function calculateTotalMonthlyCost(
   bots: ArbitrageBot[],
   activePasses: NftPass[]
 ): number {
-  return bots.reduce((total, bot) => {
-    return total + calculateBotMonthlyFee(bot, activePasses);
+  // Sort bots by creation date to determine order
+  const sortedBots = [...bots].sort((a, b) => 
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+  
+  return sortedBots.reduce((total, bot, index) => {
+    return total + calculateBotMonthlyFee(bot, activePasses, sortedBots.length, index);
   }, 0);
 }
 
@@ -153,13 +171,15 @@ export function getPaymentSummary(bots: ArbitrageBot[], activePasses: NftPass[])
   const includedBots = activeBots.filter((b) => b.isIncludedBot);
   const additionalBots = activeBots.filter((b) => !b.isIncludedBot);
   const totalMonthlyCost = calculateTotalMonthlyCost(bots, activePasses);
-  const hasFeeWaiver = activePasses.some((p) => p.benefitType === "fee_waiver");
+  const hasFeeWaiver = activePasses.some((p) => p.benefitType === "fee_waiver" && isPassValid(p));
+  const freeBotSlots = getFreeBotSlots(activePasses);
 
   return {
     totalBots: bots.length,
     activeBots: activeBots.length,
     includedBots: includedBots.length,
     additionalBots: additionalBots.length,
+    freeBotSlotsAvailable: freeBotSlots,
     monthlyCostSOL: totalMonthlyCost,
     hasFeeWaiver,
     nextPaymentDue: calculateNextPaymentDue(),
