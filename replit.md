@@ -3,6 +3,8 @@
 ## Overview
 Wallet Buddhi is a tiered wallet protection system for Solana that detects spam tokens and malicious transactions. It provides three tiers of service: Basic (free local classification), Pro (Deep3 Labs AI integration), and Pro+ (arbitrage bots).
 
+**$CATH Token Integration:** Users can access Pro/Pro+ tiers by holding $CATH tokens (50 for Pro, 100 for Pro+) OR paying monthly subscription fees. The $0.99/month base fee is waived when $CATH holdings are worth ≥ 0.1 SOL.
+
 ## Project Status
 **MVP Complete** - All core features implemented and functional
 
@@ -34,7 +36,11 @@ Wallet Buddhi is a tiered wallet protection system for Solana that detects spam 
   - `/api/arbitrage-bots/*` - Bot management (Pro+ only)
   - `/api/arbitrage-bots/import` - Bot template import with schema validation
   - `/api/passes/*` - NFT pass activation/deactivation
-  - `/api/payments/*` - Payment calculation and processing
+  - `/api/payments/*` - Payment calculation and processing (includes CATH metrics)
+  - `/api/payments/app-purchase` - Process one-time app purchase
+  - `/api/payments/base-monthly` - Process base monthly fee (auto-waived with CATH)
+  - `/api/payments/tier-subscription` - Process Pro/Pro+ subscription
+  - `/api/tiers/resolve/:walletId` - Resolve tier from CATH holdings + subscriptions
   - `/api/deep3/analyze/:tokenAddress` - Deep3 AI analysis
 
 ## Features by Tier
@@ -45,15 +51,18 @@ Wallet Buddhi is a tiered wallet protection system for Solana that detects spam 
 - Basic threat classification (Safe, Suspicious, Danger, Blocked)
 - WebSocket live updates
 
-### Pro ($9.99/mo)
+### Pro (Hold 50 $CATH OR $9.99/mo)
 - Everything in Basic
 - Deep3 Labs AI integration (mocked)
 - Advanced risk scoring (0-100)
 - Token metadata analysis
 - Historical data access
 - wbuddi.cooperanth.sol naming
+- **Access Methods:**
+  - Hold 50+ $CATH tokens, OR
+  - Pay $9.99/month subscription
 
-### Pro+ ($29.99/mo)
+### Pro+ (Hold 100 $CATH OR $29.99/mo)
 - Everything in Pro
 - **2 arbitrage bots included** (free monthly fee, 0.5% transaction fee only)
 - **3 additional bot slots** (0.0009 SOL/month each + 0.5% transaction fee)
@@ -63,8 +72,27 @@ Wallet Buddhi is a tiered wallet protection system for Solana that detects spam 
 - Dedicated cooperanth.sol wallets for each bot
 - MEV protection via Deep3 risk gating
 - Priority support
+- **Access Methods:**
+  - Hold 100+ $CATH tokens, OR
+  - Pay $29.99/month subscription
 
 ## Monetization System
+
+### App Purchase & Base Fee
+- **App Purchase:** One-time $0.99 fee to unlock the application
+- **Base Monthly Fee:** $0.99/month subscription
+  - **Waived** when $CATH holdings are worth ≥ 0.1 SOL
+  - Charged on the 1st of each month
+  - Payments accepted in SOL or $CATH tokens
+
+### Tier Access System (Priority Order)
+1. **$CATH Holdings** (checked on-chain with 60s cache)
+   - Pro: Hold 50+ $CATH tokens
+   - Pro+: Hold 100+ $CATH tokens
+2. **Paid Subscription** (fallback if insufficient $CATH)
+   - Pro: $9.99/month
+   - Pro+: $29.99/month
+3. **Default** (Basic tier if neither above)
 
 ### Bot Fee Structure
 - **First 2 bots (included):** FREE monthly fee, 0.5% transaction fee only
@@ -127,6 +155,38 @@ WebSocket server broadcasts:
 - **Branding:** Wallet Buddhi mascot (blue shield character) prominently featured
 
 ## Recent Changes
+
+### 2025-10-21: $CATH Token Monetization Integration
+- **Schema Extensions:**
+  - Added wallet fields: `cathBalance`, `cathValueInSol`, `holdingsCheckedAt`
+  - Added app purchase tracking: `appPurchased`, `appPurchasedAt`, `appPurchaseTxSignature`
+  - Added base fee tracking: `baseFeeStatus`, `baseFeeNextDue`, `baseFeeLastPaidAt`, `baseFeeWaivedReason`
+  - Added tier subscription tracking: `paidTier`, `paidTierStatus`, `paidTierMethod`, `paidTierNextDue`, `paidTierLastPaidAt`
+  - Added payment preference: `paymentPreference` (SOL or CATH)
+- **CATH Utilities (server/cath-utils.ts):**
+  - `fetchCathPriceInSol()` - Fetch CATH/SOL price with 60s TTL cache
+  - `fetchSolPriceInUsd()` - Fetch SOL/USD price with 60s TTL cache
+  - `getCathHoldings()` - Get user's CATH balance (mocked, ready for on-chain integration)
+  - `isBaseFeeWaived()` - Check if base fee waived by CATH holdings (≥ 0.1 SOL value)
+  - `resolveTier()` - Determine tier from: CATH holdings > subscription > default
+  - `convertUsdToSol()` / `convertUsdToCath()` - Price conversions
+- **New Payment API Endpoints:**
+  - `POST /api/payments/app-purchase` - Process $0.99 one-time app purchase
+  - `POST /api/payments/base-monthly` - Process $0.99/month base fee (auto-waived with CATH)
+  - `POST /api/payments/tier-subscription` - Subscribe to Pro ($9.99) or Pro+ ($29.99)
+  - `GET /api/tiers/resolve/:walletId` - Resolve tier with CATH holdings check
+  - `PATCH /api/wallets/:id/payment-preference` - Set payment method (SOL/CATH)
+- **Enhanced Payment Calculation:**
+  - Updated `/api/payments/calculate/:walletId` to include CATH holdings, tier resolution, base fee waiver status
+  - Returns app purchase status, tier thresholds, payment preferences
+- **Tier Resolution Logic:**
+  - Priority: $CATH holdings (50 for Pro, 100 for Pro+) > Paid subscription > Basic
+  - NFT passes still override tier resolution for temporary upgrades
+  - Base fee ($0.99/mo) waived when CATH worth ≥ 0.1 SOL
+- **Security TODOs:**
+  - Implement on-chain SPL token balance verification (never trust client)
+  - Use trusted price oracles (Jupiter, Pyth) with caching
+  - Add transaction signature verification for payments
 
 ### 2025-10-21: Complete Monetization System
 - **Schema Extensions:**
