@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Download, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Download, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 import { type BotTemplate } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { exampleBotTemplates, templateDescriptions } from "@/data/bot-templates";
 
 interface ImportBotDialogProps {
   walletId: string;
@@ -96,13 +97,38 @@ export function ImportBotDialog({ walletId, disabled }: ImportBotDialogProps) {
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Example Templates */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-solana-purple" />
+              <label className="text-sm font-medium">Example Templates</label>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {Object.entries(exampleBotTemplates).map(([key, template]) => (
+                <Button
+                  key={key}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleJsonChange(JSON.stringify(template, null, 2))}
+                  className="text-xs h-auto py-3 flex flex-col items-start gap-1"
+                  data-testid={`button-template-${key}`}
+                >
+                  <span className="font-semibold">{template.name}</span>
+                  <span className="text-muted-foreground font-normal text-wrap text-left">
+                    {templateDescriptions[key]}
+                  </span>
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {/* JSON Input */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Bot Template JSON</label>
             <Textarea
               value={jsonInput}
               onChange={(e) => handleJsonChange(e.target.value)}
-              placeholder='Paste your bot template JSON here...\n\nExample:\n{\n  "name": "Conservative DEX Arbitrage",\n  "strategy": "dex_arbitrage",\n  "minProfitThreshold": 0.02,\n  "maxRiskScore": 40,\n  ...\n}'
+              placeholder='Paste your bot template JSON here or click an example template above...'
               className="font-mono text-xs min-h-[200px]"
               data-testid="textarea-bot-json"
             />

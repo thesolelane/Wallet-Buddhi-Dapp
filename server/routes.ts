@@ -66,6 +66,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if wallet already exists
       const existing = await storage.getWalletByAddress(data.address);
       if (existing) {
+        // Update tier if it has changed
+        if (existing.tier !== data.tier) {
+          const updated = await storage.updateWallet(existing.id, { tier: data.tier });
+          return res.json(updated);
+        }
         return res.json(existing);
       }
       
