@@ -233,21 +233,65 @@ WebSocket server broadcasts:
 - Local token classifier with CA-first rules
 - WebSocket real-time monitoring system
 
+## Bot Architecture (Future Development)
+
+### Bot-Embedded Settings UI
+The arbitrage bot will be a downloadable application with embedded settings interface:
+
+**Authentication:**
+- QR code-based wallet authentication (scan to access bot settings)
+- Pin signature sent to wallet for verification
+- No KYC required - purely wallet-based access control
+
+**Bot Settings Interface:**
+- **Network Selection:** Choose Solana networks (mainnet/devnet/testnet)
+- **Notifications:** Configure alerts for trades, errors, payment reminders
+- **Dark Mode:** Toggle theme preference
+- **Wallet Activation:** Link wallet to Pro/Pro+ tier features
+- **Tier Management:** View current tier, upgrade options, payment status
+- **Arbitrage Bot Controls:** 
+  - Activate/pause bots
+  - Download bot configuration files
+  - Approve bot trading permissions
+  - View bot performance stats
+- **Solana Naming:** Claim personalized xxxx.wbuddhi.cooperanth.sol addresses
+
+### Smart Contract Architecture
+**User Agreements as Smart Contracts:**
+- Each user agreement (tier subscription, bot activation, etc.) will be a Solana smart contract
+- Smart contracts integrated with NFT pass system for benefit verification
+- On-chain enforcement of tier access, payment requirements, and NFT pass benefits
+- Automatic tier upgrades when NFT passes detected in wallet
+- Transparent, auditable payment and access history
+
 ## Next Steps (Post-MVP)
 
 ### High Priority
-1. **Solana Payment Integration**
-   - Implement smart contract for bot monthly fees
-   - Add SOL and $CATH token payment processing
+1. **Solana Smart Contract Development**
+   - User agreement contracts (tier subscriptions, bot activations)
+   - NFT pass integration contracts (benefit verification, tier overrides)
+   - Payment processing contracts (SOL and $CATH token support)
+   - Bot monthly fee enforcement via smart contract
+
+2. **Bot Download & Authentication System**
+   - Downloadable bot application (Electron or native)
+   - QR code authentication flow with wallet signature verification
+   - Embedded settings UI inside bot application
+   - Bot configuration file download/import system
+
+3. **Solana Integration**
    - Verify NFT ownership via Solana RPC
    - Parse NFT metadata for pass benefits
+   - SPL token balance verification (never trust client)
+   - Solana Name Service (.sol) claiming integration
 
-2. **NFT Pass Features**
+4. **NFT Pass Features**
    - Automatic pass detection in user wallet
    - Pass benefit visualization in UI
    - DAO issuance tooling
+   - Smart contract-based pass enforcement
 
-3. **UI Updates**
+5. **UI Updates**
    - Payment status indicators in Dashboard
    - Next payment due notifications
    - Bot lifecycle status (active/paused/pending deletion)

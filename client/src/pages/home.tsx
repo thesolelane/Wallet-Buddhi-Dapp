@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield, Sparkles, Zap, CheckCircle } from "lucide-react";
+import { Link } from "wouter";
 import mascotUrl from "@assets/ChatGPT Image Oct 20, 2025, 01_13_52 PM_1761005062750.png";
 
 interface HomePageProps {
@@ -42,7 +43,7 @@ export function HomePage({ onConnect }: HomePageProps) {
                   Connect Wallet
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <a href="#features">Learn More</a>
+                  <Link href="/tiers">Learn More</Link>
                 </Button>
               </div>
               
