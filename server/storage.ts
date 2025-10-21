@@ -27,6 +27,7 @@ export interface IStorage {
   // Arbitrage Bots
   getArbitrageBot(id: string): Promise<ArbitrageBot | undefined>;
   getArbitrageBotsByWallet(walletId: string): Promise<ArbitrageBot[]>;
+  getAllArbitrageBots(): Promise<ArbitrageBot[]>;
   createArbitrageBot(bot: InsertArbitrageBot): Promise<ArbitrageBot>;
   updateArbitrageBot(id: string, updates: Partial<ArbitrageBot>): Promise<ArbitrageBot | undefined>;
   deleteArbitrageBot(id: string): Promise<boolean>;
@@ -132,6 +133,10 @@ export class MemStorage implements IStorage {
   async getArbitrageBotsByWallet(walletId: string): Promise<ArbitrageBot[]> {
     return Array.from(this.arbitrageBots.values())
       .filter((bot) => bot.walletId === walletId);
+  }
+
+  async getAllArbitrageBots(): Promise<ArbitrageBot[]> {
+    return Array.from(this.arbitrageBots.values());
   }
 
   async createArbitrageBot(insertBot: InsertArbitrageBot): Promise<ArbitrageBot> {
