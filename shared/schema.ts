@@ -32,6 +32,11 @@ export const wallets = pgTable("wallets", {
   tier: text("tier").notNull().default("basic"), // basic, pro, pro_plus
   nickname: text("nickname"),
   solanaName: text("solana_name"), // e.g., "wbuddi.cooperanth.sol"
+  
+  // Payment tracking
+  solBalance: text("sol_balance").default("0"),
+  cathBalance: text("cath_balance").default("0"),
+  
   connectedAt: timestamp("connected_at").notNull().defaultNow(),
 });
 
@@ -90,6 +95,14 @@ export enum BotStrategy {
   MARKET_MAKING = "market_making",
 }
 
+// Payment status enum
+export enum PaymentStatus {
+  CURRENT = "current",
+  PENDING = "pending",
+  FAILED = "failed",
+  WAIVED = "waived", // Fee waived by pass
+}
+
 // Arbitrage bot configuration (Pro+ tier)
 export const arbitrageBots = pgTable("arbitrage_bots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -105,6 +118,14 @@ export const arbitrageBots = pgTable("arbitrage_bots", {
   targetPairs: text("target_pairs").notNull().default("SOL/USDC,SOL/USDT"), // comma-separated
   dexAllowlist: text("dex_allowlist").notNull().default("raydium,orca,jupiter"), // comma-separated
   autoPauseConfig: text("auto_pause_config"), // JSON string
+  
+  // Payment tracking (for additional bots 3-5)
+  isIncludedBot: boolean("is_included_bot").notNull().default(false), // First 2 bots are included
+  paymentStatus: text("payment_status").notNull().default("current"), // current, pending, failed, waived
+  lastPaymentDate: timestamp("last_payment_date"),
+  nextPaymentDue: timestamp("next_payment_due"),
+  inactiveSince: timestamp("inactive_since"), // Track for 30-day deletion rule
+  
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -135,6 +156,55 @@ export const botTemplateSchema = z.object({
 });
 
 export type BotTemplate = z.infer<typeof botTemplateSchema>;
+
+// NFT Pass rarity levels
+export enum PassRarity {
+  COMMON = "common",
+  RARE = "rare",
+  EPIC = "epic",
+  LEGENDARY = "legendary",
+}
+
+// NFT Pass benefit types
+export enum PassBenefitType {
+  FEE_WAIVER = "fee_waiver", // Waive monthly bot fees
+  FREE_BOT_SLOT = "free_bot_slot", // Additional free bot slot
+  TIER_UPGRADE = "tier_upgrade", // Temporary tier upgrade
+  EXTENSION = "extension", // Extend pass duration
+  BOOSTER = "booster", // Performance booster
+}
+
+// NFT Passes for fee waivers and benefits
+export const nftPasses = pgTable("nft_passes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletId: varchar("wallet_id").notNull(),
+  nftMintAddress: text("nft_mint_address").notNull().unique(), // Solana NFT mint address
+  passName: text("pass_name").notNull(),
+  rarity: text("rarity").notNull(), // common, rare, epic, legendary
+  benefitType: text("benefit_type").notNull(), // fee_waiver, free_bot_slot, tier_upgrade, extension, booster
+  
+  // Metadata (stored as JSON)
+  traits: text("traits"), // JSON string: {background, power, boost, etc}
+  
+  // Validity
+  isActive: boolean("is_active").notNull().default(true),
+  expiresAt: timestamp("expires_at"), // null = permanent
+  
+  // Benefits
+  freeBotSlots: integer("free_bot_slots").default(0), // Number of additional free bot slots
+  feeWaiverMonths: integer("fee_waiver_months"), // null = permanent, number = months
+  tierUpgrade: text("tier_upgrade"), // "pro" or "pro_plus"
+  
+  claimedAt: timestamp("claimed_at").notNull().defaultNow(),
+});
+
+export const insertNftPassSchema = createInsertSchema(nftPasses).omit({
+  id: true,
+  claimedAt: true,
+});
+
+export type InsertNftPass = z.infer<typeof insertNftPassSchema>;
+export type NftPass = typeof nftPasses.$inferSelect;
 
 // Arbitrage bot stats
 export interface BotStats {
