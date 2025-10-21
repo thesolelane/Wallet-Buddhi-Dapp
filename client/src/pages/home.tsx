@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield, Sparkles, Zap, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
-import mascotUrl from "@assets/ChatGPT Image Oct 20, 2025, 01_13_52 PM_1761005062750.png";
+import mascotUrl from "@assets/ChatGPT Image Oct 20, 2025, 01_13_52 PM (1)_1761084669346.png";
 
 interface HomePageProps {
   onConnect: () => void;
