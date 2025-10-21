@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wallet Buddhi Twitter Banner</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: #1a1a1a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .banner {
+      width: 1200px;
+      height: 400px;
+      background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      padding: 60px 80px;
+      gap: 60px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    .banner::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    
+    .logo-container {
+      flex-shrink: 0;
+      width: 280px;
+      height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+    
+    .logo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+    }
+    
+    .content {
+      flex: 1;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .title {
+      font-size: 64px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -2px;
+      line-height: 1;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    .subtitle {
+      font-size: 28px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+      letter-spacing: -0.5px;
+    }
+    
+    .features {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .feature {
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .instructions {
+      text-align: center;
+      color: #999;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="banner">
+      <div class="logo-container">
+        <img src="attached_assets/ChatGPT Image Oct 20, 2025, 01_13_52 PM (1)_1761084669346.png" alt="Wallet Buddhi Mascot">
+      </div>
+      <div class="content">
+        <div class="title">WALLET BUDDHI</div>
+        <div class="subtitle">AI-Powered Solana Protection</div>
+        <div class="features">
+          <div class="feature">Basic • Pro • Pro+</div>
+          <div class="feature">🛡️ Threat Detection</div>
+          <div class="feature">🤖 Arbitrage Bots</div>
+          <div class="feature">💎 $CATH Token</div>
+        </div>
+      </div>
+    </div>
+    <p class="instructions">
+      Right-click on the banner and "Save Image As..." or take a screenshot<br>
+      Recommended size: 1200 × 400px (perfect for Twitter/X posts)
+    </p>
+  </div>
+</body>
+</html>
