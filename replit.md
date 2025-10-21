@@ -1,312 +1,54 @@
 # Wallet Buddhi - Solana Wallet Protection dApp
 
 ## Overview
-Wallet Buddhi is a tiered wallet protection system for Solana that detects spam tokens and malicious transactions. It provides three tiers of service: Basic (free local classification), Pro (Deep3 Labs AI integration), and Pro+ (arbitrage bots).
-
-**$CATH Token Integration:** All users pay a $0.99 one-time app purchase + $0.99/month base fee (waived when holding $CATH worth ≥ 0.005 SOL). Users can access Pro/Pro+ tiers by holding $CATH tokens (50 for Pro, 100 for Pro+) OR paying monthly subscription fees.
-
-## Project Status
-**MVP Complete** - All core features implemented and functional
-
-## Architecture
-
-### Frontend (React + TypeScript)
-- **Pages:**
-  - `/` - Landing page (HomePage) or Dashboard if wallet connected
-  - `/tiers` - Tier comparison and upgrade page
-- **Key Components:**
-  - `WalletConnectModal` - Connect Phantom, Solflare, or Backpack wallets
-  - `Dashboard` - Transaction monitoring and bot management
-  - `TierCard` - Tier feature comparison cards
-  - `TransactionRow` - Individual transaction display with threat analysis
-  - `Deep3Modal` - AI threat analysis details
-  - `ArbitrageBotPanel` - Bot configuration and stats
-  - `ImportBotDialog` - Template import with JSON validation and preview
-  - `ThreatBadge` - Color-coded threat level indicators
-
-### Backend (Express + TypeScript)
-- **Storage:** In-memory storage (MemStorage) for wallets, transactions, bots, and NFT passes
-- **Classifier:** CA-first (Contract Analysis) rules-based spam detection
-- **Deep3 Mock:** Simulated AI threat analysis service
-- **WebSocket:** Real-time transaction monitoring on `/ws` path
-- **Bot Lifecycle Manager:** Automated payment enforcement and cleanup
-- **API Endpoints:**
-  - `/api/wallets/*` - Wallet CRUD operations (POST endpoint updates tier if changed)
-  - `/api/transactions/*` - Transaction history and simulation
-  - `/api/arbitrage-bots/*` - Bot management (Pro+ only)
-  - `/api/arbitrage-bots/import` - Bot template import with schema validation
-  - `/api/passes/*` - NFT pass activation/deactivation
-  - `/api/payments/*` - Payment calculation and processing (includes CATH metrics)
-  - `/api/payments/app-purchase` - Process one-time app purchase
-  - `/api/payments/base-monthly` - Process base monthly fee (auto-waived with CATH)
-  - `/api/payments/tier-subscription` - Process Pro/Pro+ subscription
-  - `/api/tiers/resolve/:walletId` - Resolve tier from CATH holdings + subscriptions
-  - `/api/deep3/analyze/:tokenAddress` - Deep3 AI analysis
-
-## Features by Tier
-
-### Basic ($0.99 one-time + $0.99/mo)
-- Local spam classifier with CA-first rules
-- Real-time transaction monitoring
-- Basic threat classification (Safe, Suspicious, Danger, Blocked)
-- WebSocket live updates
-- **Pricing:**
-  - $0.99 one-time app purchase
-  - $0.99/month base fee (waived when $CATH holdings ≥ 0.005 SOL value)
-
-### Pro (Hold 50 $CATH OR $9.99/mo)
-- Everything in Basic
-- Deep3 Labs AI integration (mocked)
-- Advanced risk scoring (0-100)
-- Token metadata analysis
-- Historical data access
-- wbuddi.cooperanth.sol naming
-- **Access Methods:**
-  - Hold 50+ $CATH tokens, OR
-  - Pay $9.99/month subscription
-
-### Pro+ (Hold 100 $CATH OR $29.99/mo)
-- Everything in Pro
-- **2 arbitrage bots included** (free monthly fee, 0.5% transaction fee only)
-- **3 additional bot slots** (0.0009 SOL/month each + 0.5% transaction fee)
-- Bot template marketplace with curated configurations (Conservative DEX, Stable Liquidity, Aggressive Market Maker)
-- JSON-based template import with strict validation
-- Automated trading strategies with configurable risk parameters
-- Dedicated cooperanth.sol wallets for each bot
-- MEV protection via Deep3 risk gating
-- Priority support
-- **Access Methods:**
-  - Hold 100+ $CATH tokens, OR
-  - Pay $29.99/month subscription
-
-## Monetization System
-
-### App Purchase & Base Fee
-- **App Purchase:** One-time $0.99 fee to unlock the application
-- **Base Monthly Fee:** $0.99/month subscription
-  - **Waived** when $CATH holdings are worth ≥ 0.005 SOL
-  - Charged on the 1st of each month
-  - Payments accepted in SOL or $CATH tokens
-
-### Tier Access System (Priority Order)
-1. **$CATH Holdings** (checked on-chain with 60s cache)
-   - Pro: Hold 50+ $CATH tokens
-   - Pro+: Hold 100+ $CATH tokens
-2. **Paid Subscription** (fallback if insufficient $CATH)
-   - Pro: $9.99/month
-   - Pro+: $29.99/month
-3. **Default** (Basic tier if neither above)
-
-### Bot Fee Structure
-- **First 2 bots (included):** FREE monthly fee, 0.5% transaction fee only
-- **Additional bots (3-5):** 0.0009 SOL/month + 0.5% transaction fee
-- Monthly fees charged on the 1st of each month
-- Auto-pause on payment failure
-- Delete after 30 days inactive (except first 2 included bots)
-
-### NFT Pass System
-- **Distribution:** Only DAO can issue passes (distributed as Solana NFTs)
-- **Activation:** Users activate passes from their wallet inventory
-- **Verification:** NFT ownership verified in user's Solana wallet
-- **Pass Types:**
-  - **Fee Waiver:** Waives all transaction and monthly fees
-  - **Free Bot Slots:** Additional bot slots beyond the 5-bot limit
-  - **Tier Upgrade:** Temporary tier upgrades (e.g., Basic → Pro)
-  - **Time-Limited:** Passes can expire based on NFT metadata
-- **Metadata:** Pass benefits extracted from NFT metadata (rarity, traits, expiration)
-
-### Payment Tracking
-- Bot payment status: `current`, `pending`, `failed`, `waived`
-- Next payment due date (1st of next month)
-- Payment history (lastPaymentDate)
-- Wallet balances (SOL and $CATH tokens)
-
-### Solana Integration (Planned)
-- Smart contract for payment processing
-- Supports SOL and $CATH token payments
-- NFT ownership verification via Solana RPC
-- Automatic pass detection and activation
-
-## Key Design Decisions
-
-### Classification Merge Rule
-**Local BLOCK wins** - If local classifier blocks a token, it stays blocked regardless of Deep3 score. Deep3 can only elevate threat levels, never reduce them.
-
-### Wallet Connection
-Currently using mock Solana wallet connection (see `lib/solana-mock.ts`). Real Solana wallet adapter integration is ready to be added when needed.
-
-### Data Persistence
-Using in-memory storage for MVP. Easy to migrate to PostgreSQL by updating storage interface.
-
-### WebSocket Real-Time Updates
-WebSocket server broadcasts:
-- New transactions
-- Threat detections
-- Bot status updates
-- Tier changes
-
-## Technology Stack
-- **Frontend:** React, TypeScript, TailwindCSS, Shadcn UI, Wouter (routing), React Query
-- **Backend:** Express, TypeScript, WebSocket (ws package)
-- **Validation:** Zod schemas from Drizzle
-- **Fonts:** Inter (UI), JetBrains Mono (monospace for addresses)
-- **Colors:** Primary Blue (220 85% 58%), Solana Purple (265 75% 65%)
+Wallet Buddhi is a tiered Solana wallet protection system designed to detect spam tokens and malicious transactions. It offers Basic (free local classification), Pro (Deep3 Labs AI integration), and Pro+ (arbitrage bots) services. The project aims to provide robust security for Solana users, with a clear monetization strategy based on a one-time app purchase, monthly subscriptions, and a utility token ($CATH) for tier access and fee waivers. The business vision is to become a leading security solution in the Solana ecosystem, empowering users with advanced threat detection and automated trading capabilities.
 
 ## User Preferences
 - **Visual Style:** Security-first, clean modern interface inspired by Phantom/Solflare
 - **Default Theme:** Dark mode
 - **Branding:** Wallet Buddhi mascot (blue shield character) prominently featured
 
-## Recent Changes
+## System Architecture
 
-### 2025-10-21: $CATH Token Monetization Integration
-- **Schema Extensions:**
-  - Added wallet fields: `cathBalance`, `cathValueInSol`, `holdingsCheckedAt`
-  - Added app purchase tracking: `appPurchased`, `appPurchasedAt`, `appPurchaseTxSignature`
-  - Added base fee tracking: `baseFeeStatus`, `baseFeeNextDue`, `baseFeeLastPaidAt`, `baseFeeWaivedReason`
-  - Added tier subscription tracking: `paidTier`, `paidTierStatus`, `paidTierMethod`, `paidTierNextDue`, `paidTierLastPaidAt`
-  - Added payment preference: `paymentPreference` (SOL or CATH)
-- **CATH Utilities (server/cath-utils.ts):**
-  - `fetchCathPriceInSol()` - Fetch CATH/SOL price with 60s TTL cache
-  - `fetchSolPriceInUsd()` - Fetch SOL/USD price with 60s TTL cache
-  - `getCathHoldings()` - Get user's CATH balance (mocked, ready for on-chain integration)
-  - `isBaseFeeWaived()` - Check if base fee waived by CATH holdings (≥ 0.1 SOL value)
-  - `resolveTier()` - Determine tier from: CATH holdings > subscription > default
-  - `convertUsdToSol()` / `convertUsdToCath()` - Price conversions
-- **New Payment API Endpoints:**
-  - `POST /api/payments/app-purchase` - Process $0.99 one-time app purchase
-  - `POST /api/payments/base-monthly` - Process $0.99/month base fee (auto-waived with CATH)
-  - `POST /api/payments/tier-subscription` - Subscribe to Pro ($9.99) or Pro+ ($29.99)
-  - `GET /api/tiers/resolve/:walletId` - Resolve tier with CATH holdings check
-  - `PATCH /api/wallets/:id/payment-preference` - Set payment method (SOL/CATH)
-- **Enhanced Payment Calculation:**
-  - Updated `/api/payments/calculate/:walletId` to include CATH holdings, tier resolution, base fee waiver status
-  - Returns app purchase status, tier thresholds, payment preferences
-- **Tier Resolution Logic:**
-  - Priority: $CATH holdings (50 for Pro, 100 for Pro+) > Paid subscription > Basic
-  - NFT passes still override tier resolution for temporary upgrades
-  - Base fee ($0.99/mo) waived when CATH worth ≥ 0.005 SOL
-- **Security TODOs:**
-  - Implement on-chain SPL token balance verification (never trust client)
-  - Use trusted price oracles (Jupiter, Pyth) with caching
-  - Add transaction signature verification for payments
+### Frontend (React + TypeScript)
+- **Pages:** Landing page/Dashboard, Tier comparison.
+- **Key Components:** WalletConnectModal, Dashboard, TierCard, TransactionRow, Deep3Modal, ArbitrageBotPanel, ImportBotDialog, ThreatBadge.
+- **UI/UX:** Responsive design, empty/loading states, dark mode by default, security-first visual style.
 
-### 2025-10-21: Complete Monetization System
-- **Schema Extensions:**
-  - Added payment tracking to arbitrageBots: `paymentStatus`, `lastPaymentDate`, `nextPaymentDue`, `inactiveSince`, `isIncludedBot`
-  - Created NFT pass schema with metadata, traits, rarity, and benefits
-  - Added wallet balance tracking: `solBalance`, `cathBalance`
-- **Payment Utilities:**
-  - `calculateBotMonthlyFee()` - Monthly fee calculation with pass exemptions
-  - `calculateTransactionFee()` - 0.5% taker fee with pass exemptions
-  - `calculateNextPaymentDue()` - Next payment date (1st of next month)
-  - `shouldAutoPauseBot()` - Payment failure detection
-  - `shouldDeleteBot()` - 30-day inactive cleanup (excludes first 2 bots)
-- **API Endpoints:**
-  - `POST /api/payments/bot-monthly` - Process monthly bot payment
-  - `POST /api/payments/transaction-fee` - Calculate transaction fee
-  - `GET /api/payments/calculate/:walletId` - Payment summary
-  - `POST /api/passes/activate` - Activate NFT pass from wallet
-  - `POST /api/passes/deactivate` - Deactivate transferred pass
-- **Bot Lifecycle Manager:**
-  - Runs every hour to check payment status
-  - Auto-pauses bots with failed payments
-  - Deletes non-included bots inactive for 30+ days
-- **First 2 Bots Logic:**
-  - Automatically marked as `isIncludedBot = true`
-  - PaymentStatus set to `waived` (no monthly fee)
-  - Only 0.5% transaction fee applies
+### Backend (Express + TypeScript)
+- **Storage:** In-memory storage for MVP, designed for easy migration to PostgreSQL.
+- **Classifier:** CA-first (Contract Analysis) rules-based spam detection. "Local BLOCK wins" rule ensures local blocks override Deep3's analysis.
+- **Deep3 Mock:** Simulated AI threat analysis.
+- **WebSocket:** Real-time transaction monitoring, bot status, and tier updates.
+- **Bot Lifecycle Manager:** Automates payment enforcement and bot cleanup.
+- **API Endpoints:** Comprehensive CRUD and utility endpoints for wallets, transactions, arbitrage bots, NFT passes, and payments. Includes specific endpoints for app purchases, base monthly fees, tier subscriptions, and tier resolution based on $CATH holdings.
 
-### 2025-10-21: Bot template import system complete
-- Created botTemplateSchema with strict Zod validation (strategy enum, numeric ranges, DEX allowlist)
-- Built POST /api/arbitrage-bots/import endpoint with tier checks and 5-bot limit enforcement
-- Added ImportBotDialog component with 3 curated example templates and JSON preview
-- Fixed critical wallet tier sync bug: POST /api/wallets now updates tier if changed
-- Extended arbitrageBots schema with maxRiskScore, slippageTolerance, dexAllowlist, targetPairs, autoPauseConfig
-- Updated bot limits: 2 included + 3 additional slots (5 max total)
-- Full E2E testing passed: wallet connection → Pro+ upgrade → template import → limit enforcement
+### Features by Tier
+- **Basic:** Local spam classifier, real-time monitoring, basic threat classification (Safe, Suspicious, Danger, Blocked).
+- **Pro:** Includes Basic features, Deep3 Labs AI integration (mocked), advanced risk scoring, token metadata analysis, historical data access.
+- **Pro+:** Includes Pro features, up to 5 arbitrage bots (2 included, 3 additional paid slots), bot template marketplace, JSON-based template import with validation, automated trading strategies, MEV protection, priority support.
 
-### 2025-10-21: Initial MVP implementation
-- Full schema definition for wallets, transactions, and arbitrage bots
-- Complete UI with responsive design and beautiful empty/loading states
-- Mock Deep3 Labs integration with realistic threat analysis
-- Local token classifier with CA-first rules
-- WebSocket real-time monitoring system
+### Monetization System
+- **App Purchase & Base Fee:** One-time $0.99 app purchase + $0.99/month base fee. Base fee waived if $CATH holdings ≥ 0.005 SOL.
+- **Tier Access:** Prioritizes $CATH holdings (50 for Pro, 100 for Pro+), then paid subscription ($9.99/month Pro, $29.99/month Pro+), otherwise Basic.
+- **Bot Fee Structure:** First 2 bots free monthly, 0.5% transaction fee. Additional bots cost 0.0009 SOL/month + 0.5% transaction fee.
+- **NFT Pass System:** DAO-issued Solana NFTs for fee waivers, additional bot slots, or temporary tier upgrades. Benefits are extracted from NFT metadata.
 
-## Bot Architecture (Future Development)
+### Key Design Decisions
+- **Classification Merge Rule:** Local classifier's "BLOCK" status always takes precedence; Deep3 can only elevate threats.
+- **Wallet Connection:** Currently mock, with planned integration of real Solana wallet adapters.
+- **Data Persistence:** In-memory for MVP, designed for future PostgreSQL migration.
+- **WebSocket:** Real-time updates for critical user information.
 
-### Bot-Embedded Settings UI
-The arbitrage bot will be a downloadable application with embedded settings interface:
+### Technology Stack
+- **Frontend:** React, TypeScript, TailwindCSS, Shadcn UI, Wouter, React Query.
+- **Backend:** Express, TypeScript, WebSocket (ws package).
+- **Validation:** Zod schemas.
+- **Fonts:** Inter, JetBrains Mono.
+- **Color Scheme:** Primary Blue, Solana Purple.
 
-**Authentication:**
-- QR code-based wallet authentication (scan to access bot settings)
-- Pin signature sent to wallet for verification
-- No KYC required - purely wallet-based access control
-
-**Bot Settings Interface:**
-- **Network Selection:** Choose Solana networks (mainnet/devnet/testnet)
-- **Notifications:** Configure alerts for trades, errors, payment reminders
-- **Dark Mode:** Toggle theme preference
-- **Wallet Activation:** Link wallet to Pro/Pro+ tier features
-- **Tier Management:** View current tier, upgrade options, payment status
-- **Arbitrage Bot Controls:** 
-  - Activate/pause bots
-  - Download bot configuration files
-  - Approve bot trading permissions
-  - View bot performance stats
-- **Solana Naming:** Claim personalized xxxx.wbuddhi.cooperanth.sol addresses
-
-### Smart Contract Architecture
-**User Agreements as Smart Contracts:**
-- Each user agreement (tier subscription, bot activation, etc.) will be a Solana smart contract
-- Smart contracts integrated with NFT pass system for benefit verification
-- On-chain enforcement of tier access, payment requirements, and NFT pass benefits
-- Automatic tier upgrades when NFT passes detected in wallet
-- Transparent, auditable payment and access history
-
-## Next Steps (Post-MVP)
-
-### High Priority
-1. **Solana Smart Contract Development**
-   - User agreement contracts (tier subscriptions, bot activations)
-   - NFT pass integration contracts (benefit verification, tier overrides)
-   - Payment processing contracts (SOL and $CATH token support)
-   - Bot monthly fee enforcement via smart contract
-
-2. **Bot Download & Authentication System**
-   - Downloadable bot application (Electron or native)
-   - QR code authentication flow with wallet signature verification
-   - Embedded settings UI inside bot application
-   - Bot configuration file download/import system
-
-3. **Solana Integration**
-   - Verify NFT ownership via Solana RPC
-   - Parse NFT metadata for pass benefits
-   - SPL token balance verification (never trust client)
-   - Solana Name Service (.sol) claiming integration
-
-4. **NFT Pass Features**
-   - Automatic pass detection in user wallet
-   - Pass benefit visualization in UI
-   - DAO issuance tooling
-   - Smart contract-based pass enforcement
-
-5. **UI Updates**
-   - Payment status indicators in Dashboard
-   - Next payment due notifications
-   - Bot lifecycle status (active/paused/pending deletion)
-   - Pass activation modal
-
-### Medium Priority
-4. Integrate real Solana wallet adapters (@solana/wallet-adapter-react)
-5. Connect to real Deep3 Labs API for Pro tier
-6. Implement live arbitrage bot functionality
-7. Add Solana Name Service (.sol) integration
-8. Build payment/subscription flow for tier upgrades
-
-### Low Priority
-9. Add whitelist/blacklist management
-10. Implement custom security rules (Pro+ feature)
-11. Add detailed analytics dashboard
-12. Build notification system (email/push)
-13. Optimize performance and add caching layer
+## External Dependencies
+- **Deep3 Labs AI:** For advanced threat analysis (currently mocked).
+- **Solana Blockchain:** For wallet connections, NFT ownership verification, SPL token balance verification, and potential smart contract interactions.
+- **Jupiter/Pyth:** Planned integration for trusted price oracles.
+- **Solana Name Service (.sol):** Planned integration for personalized addresses.
