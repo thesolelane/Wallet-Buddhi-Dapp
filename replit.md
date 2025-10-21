@@ -19,6 +19,7 @@ Wallet Buddhi is a tiered wallet protection system for Solana that detects spam 
   - `TransactionRow` - Individual transaction display with threat analysis
   - `Deep3Modal` - AI threat analysis details
   - `ArbitrageBotPanel` - Bot configuration and stats
+  - `ImportBotDialog` - Template import with JSON validation and preview
   - `ThreatBadge` - Color-coded threat level indicators
 
 ### Backend (Express + TypeScript)
@@ -27,9 +28,10 @@ Wallet Buddhi is a tiered wallet protection system for Solana that detects spam 
 - **Deep3 Mock:** Simulated AI threat analysis service
 - **WebSocket:** Real-time transaction monitoring on `/ws` path
 - **API Endpoints:**
-  - `/api/wallets/*` - Wallet CRUD operations
+  - `/api/wallets/*` - Wallet CRUD operations (POST endpoint updates tier if changed)
   - `/api/transactions/*` - Transaction history and simulation
   - `/api/arbitrage-bots/*` - Bot management (Pro+ only)
+  - `/api/arbitrage-bots/import` - Bot template import with schema validation
   - `/api/deep3/analyze/:tokenAddress` - Deep3 AI analysis
 
 ## Features by Tier
@@ -51,7 +53,9 @@ Wallet Buddhi is a tiered wallet protection system for Solana that detects spam 
 ### Pro+ ($29.99/mo)
 - Everything in Pro
 - 2 arbitrage bots with dedicated cooperanth.sol wallets
-- Automated trading strategies
+- Bot template marketplace with curated configurations (Conservative DEX, Stable Liquidity, Aggressive Market Maker)
+- JSON-based template import with strict validation
+- Automated trading strategies with configurable risk parameters
 - MEV protection via Deep3 risk gating
 - Priority support
 
@@ -86,6 +90,13 @@ WebSocket server broadcasts:
 - **Branding:** Wallet Buddhi mascot (blue shield character) prominently featured
 
 ## Recent Changes
+- 2025-10-21: Bot template import system complete
+  - Created botTemplateSchema with strict Zod validation (strategy enum, numeric ranges, DEX allowlist)
+  - Built POST /api/arbitrage-bots/import endpoint with tier checks and 2-bot limit enforcement
+  - Added ImportBotDialog component with 3 curated example templates and JSON preview
+  - Fixed critical wallet tier sync bug: POST /api/wallets now updates tier if changed
+  - Extended arbitrageBots schema with maxRiskScore, slippageTolerance, dexAllowlist, targetPairs, autoPauseConfig
+  - Full E2E testing passed: wallet connection → Pro+ upgrade → template import → 2-bot limit enforcement
 - 2025-10-21: Initial MVP implementation with all three tiers
 - Full schema definition for wallets, transactions, and arbitrage bots
 - Complete UI with responsive design and beautiful empty/loading states
