@@ -15,7 +15,7 @@ export const PRICES = {
  * CATH holding thresholds
  */
 export const CATH_THRESHOLDS = {
-  BASE_FEE_WAIVER_SOL: 0.1, // Hold CATH worth ≥ 0.1 SOL to waive base fee
+  BASE_FEE_WAIVER_SOL: 0.005, // Hold CATH worth ≥ 0.005 SOL to waive base fee
   PRO_TIER_TOKENS: 50, // Hold 50 CATH to get Pro tier
   PRO_PLUS_TIER_TOKENS: 100, // Hold 100 CATH to get Pro+ tier
 };

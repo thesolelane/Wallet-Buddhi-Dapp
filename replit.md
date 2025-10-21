@@ -3,7 +3,7 @@
 ## Overview
 Wallet Buddhi is a tiered wallet protection system for Solana that detects spam tokens and malicious transactions. It provides three tiers of service: Basic (free local classification), Pro (Deep3 Labs AI integration), and Pro+ (arbitrage bots).
 
-**$CATH Token Integration:** Users can access Pro/Pro+ tiers by holding $CATH tokens (50 for Pro, 100 for Pro+) OR paying monthly subscription fees. The $0.99/month base fee is waived when $CATH holdings are worth ≥ 0.1 SOL.
+**$CATH Token Integration:** All users pay a $0.99 one-time app purchase + $0.99/month base fee (waived when holding $CATH worth ≥ 0.005 SOL). Users can access Pro/Pro+ tiers by holding $CATH tokens (50 for Pro, 100 for Pro+) OR paying monthly subscription fees.
 
 ## Project Status
 **MVP Complete** - All core features implemented and functional
@@ -45,11 +45,14 @@ Wallet Buddhi is a tiered wallet protection system for Solana that detects spam 
 
 ## Features by Tier
 
-### Basic (Free)
+### Basic ($0.99 one-time + $0.99/mo)
 - Local spam classifier with CA-first rules
 - Real-time transaction monitoring
 - Basic threat classification (Safe, Suspicious, Danger, Blocked)
 - WebSocket live updates
+- **Pricing:**
+  - $0.99 one-time app purchase
+  - $0.99/month base fee (waived when $CATH holdings ≥ 0.005 SOL value)
 
 ### Pro (Hold 50 $CATH OR $9.99/mo)
 - Everything in Basic
@@ -81,7 +84,7 @@ Wallet Buddhi is a tiered wallet protection system for Solana that detects spam 
 ### App Purchase & Base Fee
 - **App Purchase:** One-time $0.99 fee to unlock the application
 - **Base Monthly Fee:** $0.99/month subscription
-  - **Waived** when $CATH holdings are worth ≥ 0.1 SOL
+  - **Waived** when $CATH holdings are worth ≥ 0.005 SOL
   - Charged on the 1st of each month
   - Payments accepted in SOL or $CATH tokens
 
@@ -182,7 +185,7 @@ WebSocket server broadcasts:
 - **Tier Resolution Logic:**
   - Priority: $CATH holdings (50 for Pro, 100 for Pro+) > Paid subscription > Basic
   - NFT passes still override tier resolution for temporary upgrades
-  - Base fee ($0.99/mo) waived when CATH worth ≥ 0.1 SOL
+  - Base fee ($0.99/mo) waived when CATH worth ≥ 0.005 SOL
 - **Security TODOs:**
   - Implement on-chain SPL token balance verification (never trust client)
   - Use trusted price oracles (Jupiter, Pyth) with caching
