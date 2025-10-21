@@ -8,13 +8,25 @@ import {
   insertWalletSchema, 
   insertTransactionSchema, 
   insertArbitrageBotSchema,
+  insertNftPassSchema,
   botTemplateSchema,
   UserTier,
   TokenClassification,
   ThreatLevel,
+  PaymentStatus,
   type InsertArbitrageBot,
 } from "@shared/schema";
 import { z } from "zod";
+import {
+  calculateBotMonthlyFee,
+  calculateTransactionFee,
+  calculateNextPaymentDue,
+  getPaymentSummary,
+  shouldAutoPauseBot,
+  shouldDeleteBot,
+  MONTHLY_FEE_SOL,
+  TRANSACTION_FEE_PERCENT,
+} from "./payment-utils";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -244,7 +256,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Maximum 5 bots allowed per wallet" });
       }
       
-      const bot = await storage.createArbitrageBot(data);
+      // First 2 bots are included (free monthly fee)
+      const isIncludedBot = existingBots.length < 2;
+      
+      const bot = await storage.createArbitrageBot({
+        ...data,
+        isIncludedBot,
+        paymentStatus: isIncludedBot ? PaymentStatus.WAIVED : PaymentStatus.CURRENT,
+        nextPaymentDue: isIncludedBot ? null : calculateNextPaymentDue(),
+      });
+      
       res.json(bot);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -258,11 +279,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/arbitrage-bots/:id", async (req: Request, res: Response) => {
     try {
       const updates = req.body;
-      const bot = await storage.updateArbitrageBot(req.params.id, updates);
+      const currentBot = await storage.getArbitrageBot(req.params.id);
       
-      if (!bot) {
+      if (!currentBot) {
         return res.status(404).json({ error: "Bot not found" });
       }
+      
+      // Track inactiveSince for lifecycle management
+      if ('active' in updates) {
+        if (updates.active === false && currentBot.active === true) {
+          // Bot being deactivated
+          updates.inactiveSince = new Date();
+        } else if (updates.active === true && currentBot.active === false) {
+          // Bot being reactivated
+          updates.inactiveSince = null;
+        }
+      }
+      
+      const bot = await storage.updateArbitrageBot(req.params.id, updates);
       
       // Broadcast bot update
       broadcast({
@@ -316,6 +350,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate unique bot wallet address
       const botAddress = `bot_${Math.random().toString(36).substr(2, 9)}.cooperanth.sol`;
       
+      // First 2 bots are included (free monthly fee)
+      const isIncludedBot = existingBots.length < 2;
+      
       // Convert template to bot config
       const botData: InsertArbitrageBot = {
         walletId,
@@ -330,6 +367,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         targetPairs: validatedTemplate.targetPairs.join(","),
         dexAllowlist: validatedTemplate.dexAllowlist.join(","),
         autoPauseConfig: validatedTemplate.autoPause ? JSON.stringify(validatedTemplate.autoPause) : null,
+        isIncludedBot,
+        paymentStatus: isIncludedBot ? PaymentStatus.WAIVED : PaymentStatus.CURRENT,
+        nextPaymentDue: isIncludedBot ? null : calculateNextPaymentDue(),
       };
       
       // Create bot
@@ -351,6 +391,195 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Bot import error:", error);
       res.status(500).json({ error: "Failed to import bot template" });
+    }
+  });
+  
+  // ============= NFT PASS ROUTES =============
+  
+  // Get all activated passes for a wallet
+  app.get("/api/passes/wallet/:walletId", async (req: Request, res: Response) => {
+    try {
+      const passes = await storage.getNftPassesByWallet(req.params.walletId);
+      res.json(passes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch passes" });
+    }
+  });
+  
+  // Get active (non-expired) passes for a wallet
+  app.get("/api/passes/wallet/:walletId/active", async (req: Request, res: Response) => {
+    try {
+      const passes = await storage.getActivePassesByWallet(req.params.walletId);
+      res.json(passes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch active passes" });
+    }
+  });
+  
+  // Activate an NFT pass from user's wallet
+  app.post("/api/passes/activate", async (req: Request, res: Response) => {
+    try {
+      const { walletId, nftMintAddress } = req.body;
+      
+      if (!walletId || !nftMintAddress) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // Verify wallet exists
+      const wallet = await storage.getWallet(walletId);
+      if (!wallet) {
+        return res.status(404).json({ error: "Wallet not found" });
+      }
+      
+      // Check if NFT mint address already activated
+      const existing = await storage.getNftPassByMintAddress(nftMintAddress);
+      if (existing) {
+        return res.status(400).json({ error: "Pass already activated" });
+      }
+      
+      // TODO: Verify NFT ownership in Solana wallet
+      // For now, we'll accept the activation request
+      // In production: Use Solana RPC to verify wallet owns this NFT
+      
+      // TODO: Parse NFT metadata to extract pass details
+      // For now, use placeholder data - will be replaced with actual NFT metadata
+      const passData = {
+        walletId,
+        nftMintAddress,
+        passName: "Wallet Buddhi Pass", // From NFT metadata
+        rarity: "common", // From NFT metadata
+        benefitType: "fee_waiver", // From NFT metadata
+        traits: JSON.stringify({ power: "medium" }), // From NFT metadata
+        isActive: true,
+        expiresAt: null, // From NFT metadata (null = permanent)
+        freeBotSlots: 0, // From NFT metadata
+        feeWaiverMonths: null, // From NFT metadata (null = permanent)
+        tierUpgrade: null, // From NFT metadata
+      };
+      
+      const pass = await storage.createNftPass(passData);
+      res.json({ 
+        success: true, 
+        pass,
+        message: "Pass activated successfully" 
+      });
+    } catch (error) {
+      console.error("Pass activation error:", error);
+      res.status(500).json({ error: "Failed to activate pass" });
+    }
+  });
+  
+  // Deactivate/remove a pass (if user transfers NFT out of wallet)
+  app.post("/api/passes/deactivate", async (req: Request, res: Response) => {
+    try {
+      const { nftMintAddress } = req.body;
+      
+      if (!nftMintAddress) {
+        return res.status(400).json({ error: "Missing NFT mint address" });
+      }
+      
+      const pass = await storage.getNftPassByMintAddress(nftMintAddress);
+      if (!pass) {
+        return res.status(404).json({ error: "Pass not found" });
+      }
+      
+      // TODO: Verify NFT is no longer in wallet before deactivating
+      
+      await storage.updateNftPass(pass.id, { isActive: false });
+      res.json({ success: true, message: "Pass deactivated" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to deactivate pass" });
+    }
+  });
+  
+  // ============= PAYMENT ROUTES =============
+  
+  // Get payment calculation summary for a wallet
+  app.get("/api/payments/calculate/:walletId", async (req: Request, res: Response) => {
+    try {
+      const bots = await storage.getArbitrageBotsByWallet(req.params.walletId);
+      const activePasses = await storage.getActivePassesByWallet(req.params.walletId);
+      
+      const summary = getPaymentSummary(bots, activePasses);
+      
+      res.json({
+        ...summary,
+        monthlyFeePerBot: MONTHLY_FEE_SOL,
+        transactionFeePercent: TRANSACTION_FEE_PERCENT * 100, // Convert to percentage
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to calculate payments" });
+    }
+  });
+  
+  // Process monthly bot payment
+  app.post("/api/payments/bot-monthly", async (req: Request, res: Response) => {
+    try {
+      const { botId, paymentAmount, currency } = req.body;
+      
+      if (!botId || !paymentAmount || !currency) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const bot = await storage.getArbitrageBot(botId);
+      if (!bot) {
+        return res.status(404).json({ error: "Bot not found" });
+      }
+      
+      const activePasses = await storage.getActivePassesByWallet(bot.walletId);
+      const requiredFee = calculateBotMonthlyFee(bot, activePasses);
+      
+      // Validate payment amount (allow small buffer for conversion rates)
+      if (paymentAmount < requiredFee * 0.95) {
+        return res.status(400).json({ 
+          error: "Insufficient payment", 
+          required: requiredFee,
+          provided: paymentAmount,
+        });
+      }
+      
+      // TODO: Process actual Solana payment via smart contract
+      // For now, just update payment status
+      
+      const nextDue = calculateNextPaymentDue();
+      await storage.updateArbitrageBot(botId, {
+        paymentStatus: "current",
+        lastPaymentDate: new Date(),
+        nextPaymentDue: nextDue,
+      });
+      
+      res.json({ 
+        success: true, 
+        nextPaymentDue: nextDue,
+        message: "Payment processed successfully" 
+      });
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      res.status(500).json({ error: "Failed to process payment" });
+    }
+  });
+  
+  // Calculate transaction fee
+  app.post("/api/payments/transaction-fee", async (req: Request, res: Response) => {
+    try {
+      const { walletId, amount } = req.body;
+      
+      if (!walletId || amount === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const activePasses = await storage.getActivePassesByWallet(walletId);
+      const fee = calculateTransactionFee(parseFloat(amount), activePasses);
+      
+      res.json({ 
+        amount: parseFloat(amount),
+        fee,
+        feePercent: TRANSACTION_FEE_PERCENT * 100,
+        total: parseFloat(amount) + fee,
+        waived: fee === 0,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to calculate transaction fee" });
     }
   });
   
