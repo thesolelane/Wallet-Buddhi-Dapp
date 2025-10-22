@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Header } from "@/components/layout/header";
 import { Navigation } from "@/components/layout/navigation";
+import { Footer } from "@/components/layout/footer";
 import { WalletConnectModal } from "@/components/wallet-connect-modal";
 import { HomePage } from "@/pages/home";
 import { Dashboard } from "@/pages/dashboard";
@@ -136,6 +137,8 @@ function App() {
             onOpenChange={setShowConnectModal}
             onConnect={handleConnect}
           />
+          
+          <Footer />
         </div>
         <Toaster />
       </TooltipProvider>
