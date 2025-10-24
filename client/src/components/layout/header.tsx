@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { LogOut, Settings, Menu } from "lucide-react";
 import { UserTier } from "@shared/schema";
 import { truncateAddress } from "@/lib/solana-mock";
-import mascotUrl from "@assets/ChatGPT Image Oct 20, 2025, 01_13_52 PM_1761005062750.png";
+import mascotUrl from "@assets/ChatGPT Image Oct 20, 2025, 01_13_52 PM (1)_1761084669346.png";
 
 interface HeaderProps {
   walletAddress?: string;
@@ -28,7 +28,8 @@ export function Header({ walletAddress, solanaName, tier, onDisconnect, onConnec
           <img 
             src={mascotUrl} 
             alt="Wallet Buddhi" 
-            className="w-10 h-10 rounded-lg"
+            className="w-10 h-10 object-contain"
+            data-testid="img-header-logo"
           />
           <div>
             <h1 className="text-xl font-bold">Wallet Buddhi</h1>
