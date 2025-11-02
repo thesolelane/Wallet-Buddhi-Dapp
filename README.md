@@ -118,6 +118,27 @@ Wallet Buddhi is a tiered security solution for Solana wallets, providing real-t
 
 ---
 
+## 🌐 Domain Architecture
+
+**Primary Domains:**
+- **walletbuddhi.io** - Main web portal (traditional hosting)
+- **walletbuddhi.com** - Alternative domain (redirect or regional variant)
+- **wbuddhi.sol** - Web3 native portal (Solana Name Service, IPFS/Arweave)
+
+### Access Strategy
+
+**walletbuddhi.io** - Mainstream Entry Point
+- Traditional web hosting for easy access
+- SEO-optimized for discoverability
+- All tiers available (Basic/Pro/Pro+)
+- Target: Non-Web3 users, crypto newcomers
+
+**wbuddhi.sol** - Web3 Native Portal
+- Fully decentralized (IPFS/Arweave hosting)
+- On-chain payments (0% platform fees)
+- Accessible via Phantom/Solflare browsers
+- Target: Crypto-native users
+
 ## 🎯 Distribution Strategy
 
 ### Hybrid Approach
@@ -128,7 +149,7 @@ Wallet Buddhi is a tiered security solution for Solana wallets, providing real-t
 - No arbitrage bots - Security monitoring only
 - Target: Mainstream users, crypto newcomers
 
-**Fully Decentralized Version** (Web App + Downloadable Bot)
+**Fully Decentralized Version** (walletbuddhi.io + wbuddhi.sol)
 - All tiers (Basic/Pro/Pro+) with full features
 - On-chain payments via SOL/$CATH smart contracts (0% platform fees)
 - Arbitrage bots included - Full Pro+ functionality
