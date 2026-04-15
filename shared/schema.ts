@@ -1,312 +1,94 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, boolean } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User tiers enum
-export enum UserTier {
-  BASIC = "basic",
-  PRO = "pro",
-  PRO_PLUS = "pro_plus",
-}
+// ============== Watched Wallet ==============
 
-// Threat severity levels
-export enum ThreatLevel {
-  SAFE = "safe",
-  SUSPICIOUS = "suspicious",
-  DANGER = "danger",
-  BLOCKED = "blocked",
-}
-
-// Token classification result
-export enum TokenClassification {
-  ALLOW = "allow",
-  WARN = "warn",
-  BLOCK = "block",
-}
-
-// Users/Wallets
-export const wallets = pgTable("wallets", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  address: text("address").notNull().unique(),
-  tier: text("tier").notNull().default("basic"), // basic, pro, pro_plus (deprecated - use resolveTier)
-  nickname: text("nickname"),
-  solanaName: text("solana_name"), // e.g., "wbuddi.cooperanth.sol"
-  
-  // Wallet balances
-  solBalance: text("sol_balance").default("0"),
-  cathBalance: text("cath_balance").default("0"),
-  cathValueInSol: text("cath_value_in_sol").default("0"), // Cached value
-  holdingsCheckedAt: timestamp("holdings_checked_at"),
-  
-  // App purchase (one-time $0.99)
-  appPurchased: boolean("app_purchased").notNull().default(false),
-  appPurchasedAt: timestamp("app_purchased_at"),
-  appPurchaseTxSignature: text("app_purchase_tx_signature"),
-  
-  // Base monthly fee ($0.99/month OR waived if CATH ≥ 0.1 SOL value)
-  baseFeeStatus: text("base_fee_status").notNull().default("current"), // current, pending, failed, waived
-  baseFeeNextDue: timestamp("base_fee_next_due"),
-  baseFeeLastPaidAt: timestamp("base_fee_last_paid_at"),
-  baseFeeWaivedReason: text("base_fee_waived_reason"), // "cath_holdings" or null
-  
-  // Paid tier subscription (Pro = $9.99/mo, Pro+ = $29.99/mo OR free via CATH holdings)
-  paidTier: text("paid_tier").default("none"), // none, pro, pro_plus
-  paidTierStatus: text("paid_tier_status").default("none"), // none, current, pending, failed
-  paidTierMethod: text("paid_tier_method"), // SOL, CATH, or null
-  paidTierNextDue: timestamp("paid_tier_next_due"),
-  paidTierLastPaidAt: timestamp("paid_tier_last_paid_at"),
-  
-  // Payment preferences
-  paymentPreference: text("payment_preference").default("SOL"), // SOL or CATH
-  
-  connectedAt: timestamp("connected_at").notNull().defaultNow(),
+export const watchedWalletSchema = z.object({
+  id: z.string(),
+  pubkey: z.string().min(32).max(44),
+  label: z.string().optional(),
+  addedAt: z.string(), // ISO
 });
+export type WatchedWallet = z.infer<typeof watchedWalletSchema>;
 
-export const insertWalletSchema = createInsertSchema(wallets).omit({
-  id: true,
-  connectedAt: true,
-  holdingsCheckedAt: true,
-  appPurchasedAt: true,
-  baseFeeNextDue: true,
-  baseFeeLastPaidAt: true,
-  paidTierNextDue: true,
-  paidTierLastPaidAt: true,
-}).extend({
-  tier: z.enum(["basic", "pro", "pro_plus"]).default("basic"),
-  paymentPreference: z.enum(["SOL", "CATH"]).default("SOL"),
+export const insertWatchedWalletSchema = z.object({
+  pubkey: z.string().min(32).max(44),
+  label: z.string().optional(),
 });
+export type InsertWatchedWallet = z.infer<typeof insertWatchedWalletSchema>;
 
-export type InsertWallet = z.infer<typeof insertWalletSchema>;
-export type Wallet = typeof wallets.$inferSelect;
+// ============== Token Metadata ==============
 
-// Detected tokens/transactions
-export const transactions = pgTable("transactions", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  walletId: varchar("wallet_id").notNull(),
-  signature: text("signature").notNull().unique(),
-  tokenAddress: text("token_address").notNull(),
-  tokenName: text("token_name"),
-  tokenSymbol: text("token_symbol"),
-  amount: text("amount"),
-  timestamp: timestamp("timestamp").notNull().defaultNow(),
-  
-  // Classification results
-  localClassification: text("local_classification").notNull(), // allow, warn, block
-  localThreatLevel: text("local_threat_level").notNull(), // safe, suspicious, danger, blocked
-  localReason: text("local_reason"),
-  
-  // Deep3 AI results (Pro tier)
-  deep3Classification: text("deep3_classification"),
-  deep3ThreatScore: integer("deep3_threat_score"), // 0-100
-  deep3Reason: text("deep3_reason"),
-  deep3Metadata: text("deep3_metadata"), // JSON string
-  
-  // Final decision
-  finalClassification: text("final_classification").notNull(),
-  finalThreatLevel: text("final_threat_level").notNull(),
-  
-  // Action taken
-  blocked: boolean("blocked").notNull().default(false),
+export const tokenMetadataSchema = z.object({
+  mint: z.string(),
+  symbol: z.string().nullable(),
+  name: z.string().nullable(),
+  marketCapUsd: z.number().nullable(),
+  priceUsd: z.number().nullable(),
+  website: z.string().nullable(),
+  twitter: z.string().nullable(),
+  telegram: z.string().nullable(),
+  discord: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  creator: z.string().nullable(),
+  updateAuthority: z.string().nullable(),
+  sources: z.array(z.string()), // ["dexscreener", "jupiter", "metaplex"]
 });
+export type TokenMetadata = z.infer<typeof tokenMetadataSchema>;
 
-export const insertTransactionSchema = createInsertSchema(transactions).omit({
-  id: true,
-  timestamp: true,
+// ============== Purchased Token ==============
+
+export const purchasedTokenSchema = z.object({
+  id: z.string(),
+  watchedWalletId: z.string(),
+  mint: z.string(),
+  symbol: z.string().nullable(),
+  name: z.string().nullable(),
+  marketCapUsd: z.number().nullable(),
+  priceUsd: z.number().nullable(),
+  website: z.string().nullable(),
+  twitter: z.string().nullable(),
+  telegram: z.string().nullable(),
+  discord: z.string().nullable(),
+  imageUrl: z.string().nullable(),
+  creator: z.string().nullable(),
+  updateAuthority: z.string().nullable(),
+  sources: z.array(z.string()),
+  purchasedAt: z.string(),
 });
+export type PurchasedToken = z.infer<typeof purchasedTokenSchema>;
 
-export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
-export type Transaction = typeof transactions.$inferSelect;
+// ============== Copycat Alert ==============
 
-// Bot strategy types
-export enum BotStrategy {
-  DEX_ARBITRAGE = "dex_arbitrage",
-  LIQUIDITY_PROVISION = "liquidity_provision",
-  MARKET_MAKING = "market_making",
-}
+export const signalTypeSchema = z.enum([
+  "ticker_exact",
+  "name_fuzzy",
+  "social_overlap",
+  "creator_match",
+]);
+export type SignalType = z.infer<typeof signalTypeSchema>;
 
-// Payment status enum
-export enum PaymentStatus {
-  CURRENT = "current",
-  PENDING = "pending",
-  FAILED = "failed",
-  WAIVED = "waived", // Fee waived by pass
-}
-
-// Arbitrage bot configuration (Pro+ tier)
-export const arbitrageBots = pgTable("arbitrage_bots", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  walletId: varchar("wallet_id").notNull(),
-  botName: text("bot_name").notNull(),
-  active: boolean("active").notNull().default(false),
-  walletAddress: text("wallet_address").notNull(), // cooperanth.sol wallet
-  strategy: text("strategy").notNull(), // dex_arbitrage, liquidity_provision, market_making
-  minProfitThreshold: text("min_profit_threshold").notNull().default("0.01"), // 1%
-  maxRiskScore: integer("max_risk_score").notNull().default(50), // 0-100 Deep3 score
-  maxTradeSize: text("max_trade_size").notNull().default("10"), // SOL
-  slippageTolerance: text("slippage_tolerance").notNull().default("0.5"), // 0.5%
-  targetPairs: text("target_pairs").notNull().default("SOL/USDC,SOL/USDT"), // comma-separated
-  dexAllowlist: text("dex_allowlist").notNull().default("raydium,orca,jupiter"), // comma-separated
-  autoPauseConfig: text("auto_pause_config"), // JSON string
-  
-  // Payment tracking (for additional bots 3-5)
-  isIncludedBot: boolean("is_included_bot").notNull().default(false), // First 2 bots are included
-  paymentStatus: text("payment_status").notNull().default("current"), // current, pending, failed, waived
-  lastPaymentDate: timestamp("last_payment_date"),
-  nextPaymentDue: timestamp("next_payment_due"),
-  inactiveSince: timestamp("inactive_since"), // Track for 30-day deletion rule
-  
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+export const signalSchema = z.object({
+  type: signalTypeSchema,
+  confidence: z.number().min(0).max(1),
+  detail: z.string(),
 });
+export type Signal = z.infer<typeof signalSchema>;
 
-export const insertArbitrageBotSchema = createInsertSchema(arbitrageBots).omit({
-  id: true,
-  createdAt: true,
+export const verdictSchema = z.enum(["SUSPICIOUS", "DANGER"]);
+export type Verdict = z.infer<typeof verdictSchema>;
+
+export const alertSchema = z.object({
+  id: z.string(),
+  watchedWalletId: z.string(),
+  newMint: z.string(),
+  newSymbol: z.string().nullable(),
+  newName: z.string().nullable(),
+  matchedTokenId: z.string(),
+  matchedMint: z.string(),
+  matchedSymbol: z.string().nullable(),
+  matchedName: z.string().nullable(),
+  signals: z.array(signalSchema),
+  verdict: verdictSchema,
+  createdAt: z.string(),
 });
-
-export type InsertArbitrageBot = z.infer<typeof insertArbitrageBotSchema>;
-export type ArbitrageBot = typeof arbitrageBots.$inferSelect;
-
-// Bot template schema for import validation
-export const botTemplateSchema = z.object({
-  name: z.string().min(1).max(100),
-  strategy: z.enum(["dex_arbitrage", "liquidity_provision", "market_making"]),
-  minProfitThreshold: z.number().min(0.001).max(1).default(0.01), // 0.1% to 100%
-  maxRiskScore: z.number().int().min(0).max(100).default(50),
-  maxTradeSize: z.number().positive().max(1000).default(10), // Max 1000 SOL
-  slippageTolerance: z.number().min(0).max(10).default(0.5), // 0% to 10%
-  targetPairs: z.array(z.string()).min(1).default(["SOL/USDC", "SOL/USDT"]),
-  dexAllowlist: z.array(z.enum(["raydium", "orca", "jupiter", "phoenix"])).min(1).default(["raydium", "orca"]),
-  autoPause: z.object({
-    enabled: z.boolean().default(true),
-    volatilityThreshold: z.number().min(0).max(100).default(20), // %
-    maxDailyLoss: z.number().min(0).max(100).default(5), // SOL
-    maxConsecutiveLosses: z.number().int().min(1).max(20).default(5),
-  }).optional(),
-});
-
-export type BotTemplate = z.infer<typeof botTemplateSchema>;
-
-// NFT Pass rarity levels
-export enum PassRarity {
-  COMMON = "common",
-  RARE = "rare",
-  EPIC = "epic",
-  LEGENDARY = "legendary",
-}
-
-// NFT Pass benefit types
-export enum PassBenefitType {
-  FEE_WAIVER = "fee_waiver", // Waive monthly bot fees
-  FREE_BOT_SLOT = "free_bot_slot", // Additional free bot slot
-  TIER_UPGRADE = "tier_upgrade", // Temporary tier upgrade
-  EXTENSION = "extension", // Extend pass duration
-  BOOSTER = "booster", // Performance booster
-}
-
-// NFT Passes for fee waivers and benefits
-export const nftPasses = pgTable("nft_passes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  walletId: varchar("wallet_id").notNull(),
-  nftMintAddress: text("nft_mint_address").notNull().unique(), // Solana NFT mint address
-  passName: text("pass_name").notNull(),
-  rarity: text("rarity").notNull(), // common, rare, epic, legendary
-  benefitType: text("benefit_type").notNull(), // fee_waiver, free_bot_slot, tier_upgrade, extension, booster
-  
-  // Metadata (stored as JSON)
-  traits: text("traits"), // JSON string: {background, power, boost, etc}
-  
-  // Validity
-  isActive: boolean("is_active").notNull().default(true),
-  expiresAt: timestamp("expires_at"), // null = permanent
-  
-  // Benefits
-  freeBotSlots: integer("free_bot_slots").default(0), // Number of additional free bot slots
-  feeWaiverMonths: integer("fee_waiver_months"), // null = permanent, number = months
-  tierUpgrade: text("tier_upgrade"), // "pro" or "pro_plus"
-  
-  claimedAt: timestamp("claimed_at").notNull().defaultNow(),
-});
-
-export const insertNftPassSchema = createInsertSchema(nftPasses).omit({
-  id: true,
-  claimedAt: true,
-});
-
-export type InsertNftPass = z.infer<typeof insertNftPassSchema>;
-export type NftPass = typeof nftPasses.$inferSelect;
-
-// Arbitrage bot stats
-export interface BotStats {
-  totalTrades: number;
-  profitableTrades: number;
-  totalProfit: string;
-  avgProfitPerTrade: string;
-  uptime: number; // percentage
-}
-
-// Deep3 Labs API response types
-export interface Deep3AnalysisResponse {
-  tokenAddress: string;
-  riskScore: number; // 0-100
-  classification: "safe" | "suspicious" | "malicious";
-  confidence: number; // 0-100
-  metadata: {
-    contractAge: number; // days
-    holderCount: number;
-    liquidityUSD: number;
-    isHoneypot: boolean;
-    isMintable: boolean;
-    hasBlacklist: boolean;
-    rugPullRisk: number; // 0-100
-    socialScore: number; // 0-100
-  };
-  recommendations: string[];
-}
-
-// WebSocket message types
-export interface WSMessage {
-  type: "transaction" | "threat_detected" | "bot_update" | "tier_update";
-  data: any;
-}
-
-// Tier feature flags
-export interface TierFeatures {
-  localClassifier: boolean;
-  deep3Integration: boolean;
-  arbitrageBots: boolean;
-  maxBotsAllowed: number;
-  realtimeMonitoring: boolean;
-  historicalData: boolean; // days
-  customRules: boolean;
-}
-
-export const TIER_FEATURES: Record<UserTier, TierFeatures> = {
-  [UserTier.BASIC]: {
-    localClassifier: true,
-    deep3Integration: false,
-    arbitrageBots: false,
-    maxBotsAllowed: 0,
-    realtimeMonitoring: true,
-    historicalData: false,
-    customRules: false,
-  },
-  [UserTier.PRO]: {
-    localClassifier: true,
-    deep3Integration: true,
-    arbitrageBots: false,
-    maxBotsAllowed: 0,
-    realtimeMonitoring: true,
-    historicalData: true,
-    customRules: true,
-  },
-  [UserTier.PRO_PLUS]: {
-    localClassifier: true,
-    deep3Integration: true,
-    arbitrageBots: true,
-    maxBotsAllowed: 2,
-    realtimeMonitoring: true,
-    historicalData: true,
-    customRules: true,
-  },
-};
+export type Alert = z.infer<typeof alertSchema>;

@@ -1,182 +1,92 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, Sparkles, Zap, CheckCircle } from "lucide-react";
+import { Shield, Eye, Bell, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 import mascotUrl from "@assets/ChatGPT Image Oct 20, 2025, 01_13_52 PM (1)_1761084669346.png";
 
-interface HomePageProps {
-  onConnect: () => void;
-}
-
-export function HomePage({ onConnect }: HomePageProps) {
-  const handleConnect = () => {
-    onConnect();
-  };
+export function HomePage() {
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-solana-purple/10 to-background py-20 lg:py-32">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-sm font-medium">
-                <Shield className="w-4 h-4" />
-                Trusted by Solana Community
-              </div>
-              
-              <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
-                Protect Your
-                <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-solana-purple">
-                  Solana Wallet
-                </span>
-              </h1>
-              
-              <p className="text-xl text-muted-foreground max-w-xl">
-                Advanced spam detection and AI-powered threat analysis for Phantom, Solflare, 
-                and Backpack wallets. Block malicious tokens before they can harm you.
-              </p>
-              
-              <div className="flex flex-wrap gap-4">
-                <Button size="lg" onClick={handleConnect} data-testid="button-hero-connect">
-                  <Shield className="w-5 h-5 mr-2" />
-                  Connect Wallet
-                </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <Link href="/tiers">Learn More</Link>
-                </Button>
-              </div>
-              
-              <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-success" />
-                  $0.99 App + $0.99/mo
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-success" />
-                  No Transaction Fees
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-success" />
-                  Real-time Monitoring
-                </div>
-              </div>
+    <div>
+      <section className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-solana-purple/10 to-background py-16 lg:py-24 px-6 lg:px-12">
+        <div className="grid lg:grid-cols-2 gap-10 items-center">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full text-sm font-medium">
+              <Shield className="w-4 h-4" /> Read-only companion for Phantom & Solana
             </div>
-            
-            <div className="flex justify-center lg:justify-end">
-              <img 
-                src={mascotUrl} 
-                alt="Wallet Buddhi Mascot" 
-                className="w-full max-w-md animate-pulse"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-      
-      {/* Features Section */}
-      <section id="features" className="py-20">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Three Tiers of Protection</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              From basic spam filtering to advanced AI analysis and automated trading
+            <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
+              Catch copycat tokens
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-solana-purple">
+                before they catch you.
+              </span>
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-xl">
+              Paste the public key of any Solana wallet you own. Wallet Buddhi watches it
+              read-only, records every token you buy — contract, ticker, market cap, Telegram,
+              Twitter, Discord, website, creator — and alerts you when a new token shows up
+              that impersonates one you already hold.
             </p>
+            <div className="flex flex-wrap gap-4">
+              <Button size="lg" asChild>
+                <Link href="/dashboard">
+                  <Eye className="w-5 h-5 mr-2" /> Open Dashboard
+                </Link>
+              </Button>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-success" /> No wallet connect needed
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-success" /> Watches pubkeys read-only
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-success" /> Alerts on ticker copycats
+              </div>
+            </div>
           </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            <FeatureCard
-              icon={<Shield className="w-8 h-8" />}
-              title="Basic"
-              price="$0.99 + $0.99/mo"
-              description="Local spam classifier with CA-first rules"
-              features={[
-                "Real-time transaction monitoring",
-                "Contract analysis",
-                "Known scam detection",
-                "Basic threat classification",
-              ]}
-            />
-            
-            <FeatureCard
-              icon={<Sparkles className="w-8 h-8" />}
-              title="Pro"
-              price="$9.99/mo"
-              description="AI-powered threat detection"
-              features={[
-                "Everything in Basic",
-                "Deep3 Labs AI integration",
-                "Advanced risk scoring",
-                "Token metadata analysis",
-                "Historical data access",
-              ]}
-              highlighted
-            />
-            
-            <FeatureCard
-              icon={<Zap className="w-8 h-8" />}
-              title="Pro+"
-              price="$29.99/mo"
-              description="Full protection + arbitrage bots"
-              features={[
-                "Everything in Pro",
-                "2 arbitrage bots included + 3 additional slots",
-                "cooperanth.sol wallets",
-                "Automated MEV protection",
-                "Priority support",
-              ]}
-            />
+          <div className="flex justify-center lg:justify-end">
+            <img src={mascotUrl} alt="Wallet Buddhi" className="w-full max-w-sm" />
           </div>
         </div>
       </section>
-      
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-primary/5 to-solana-purple/5">
-        <div className="container mx-auto px-4 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold mb-6">Ready to Protect Your Wallet?</h2>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join thousands of Solana users who trust Wallet Buddhi to keep their assets safe
+
+      <section className="py-14">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold mb-3">How it works</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Three steps. No signatures, no approvals, no key custody.
           </p>
-          <Button size="lg" onClick={handleConnect} data-testid="button-cta-connect">
-            <Shield className="w-5 h-5 mr-2" />
-            Get Started - $0.99
-          </Button>
+        </div>
+        <div className="grid md:grid-cols-3 gap-6">
+          <Step
+            icon={<Eye className="w-6 h-6" />}
+            title="Paste a pubkey"
+            body="Add the public address of any wallet you want to watch. The app never touches your wallet."
+          />
+          <Step
+            icon={<Shield className="w-6 h-6" />}
+            title="Registry builds itself"
+            body="Every new SPL token that lands in the watched wallet gets recorded with full metadata pulled from DexScreener, Jupiter, and on-chain Metaplex."
+          />
+          <Step
+            icon={<Bell className="w-6 h-6" />}
+            title="Copycat alerts"
+            body="When a new token shares a ticker, near-identical name, matching socials, or the same creator, you get an alert with the signals that fired."
+          />
         </div>
       </section>
     </div>
   );
 }
 
-function FeatureCard({ icon, title, price, description, features, highlighted }: {
-  icon: React.ReactNode;
-  title: string;
-  price: string;
-  description: string;
-  features: string[];
-  highlighted?: boolean;
-}) {
+function Step({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
-    <Card className={highlighted ? "ring-2 ring-primary" : ""}>
-      <CardContent className="p-8 space-y-6">
-        <div className="space-y-4">
-          <div className="p-3 bg-primary/10 rounded-lg w-fit text-primary">
-            {icon}
-          </div>
-          <div>
-            <h3 className="text-2xl font-bold mb-1">{title}</h3>
-            <div className="text-3xl font-bold mb-2">{price}</div>
-            <p className="text-muted-foreground">{description}</p>
-          </div>
-        </div>
-        
-        <ul className="space-y-3">
-          {features.map((feature, index) => (
-            <li key={index} className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-success shrink-0 mt-0.5" />
-              <span className="text-sm">{feature}</span>
-            </li>
-          ))}
-        </ul>
+    <Card>
+      <CardContent className="p-6 space-y-3">
+        <div className="p-2.5 bg-primary/10 rounded-lg w-fit text-primary">{icon}</div>
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <p className="text-sm text-muted-foreground">{body}</p>
       </CardContent>
     </Card>
   );
